@@ -172,6 +172,12 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 **Caught by reading the framework source, not by assuming:** a `FormGroup` emits `touched` only the *first* time any child is touched (`markAsTouched` → `if (changed …)`). Bridging only `form.events` would miss tabbing past a second empty field. The agent merged per-control streams and wrote a regression test, then **proved the test bites**: with group-only events it fails ("1 failed | 43 passed"), with the fix it passes.
 **Decided:** Reactive Forms kept (the brief says "Reactive form"). Signal Forms (stable in v22) is documented as the next step in docs/06.
 
+### 24. G5: both services in 2 commands
+**Prompt:** "fix the issues" (G5: the README claimed 4 commands, but it was 6 counting `cd`).
+**Output:** A root `package.json`: `npm install` installs both projects (postinstall), and `npm start` runs `scripts/start-all.mjs`. That starts the API and UI with `[api]`/`[web]`-prefixed output, kills the whole process tree on Ctrl+C, and **stops both and exits 1 if either fails**. No new dependencies, and the per-project lockfiles and Dockerfile are untouched. Each service still starts with its own `npm start`, as the brief requires. README rewritten.
+**Found by running it, not by reading it:** the first run (API on `PORT=3005`) showed `ng serve` **also honours `PORT`**, so both services bound 3005. That's a latent trap for anyone following the README's `PORT` setting. Fix: the UI gets an environment without `PORT` and an explicit `--port 4200`, and the README now warns about it. The run also printed Node's DEP0190 warning (args array with `shell: true`), fixed by passing one constant command string.
+**Verified:** API on 3005 and UI on 4200 both answer. The ports are free after stopping. With 3000 already taken, the API fails with `EADDRINUSE`, the UI is stopped too, and the exit code is 1.
+
 ---
 
 <!-- Template for new entries

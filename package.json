@@ -1,0 +1,16 @@
+{
+  "name": "policyquote",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PolicyQuote: Angular frontend + Lambda-style Node API + Knowledge Base risk engine",
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "postinstall": "npm install --prefix backend --no-fund --no-audit && npm install --prefix frontend --no-fund --no-audit",
+    "start": "node scripts/start-all.mjs",
+    "test": "npm test --prefix backend && npm test --prefix frontend",
+    "kb:validate": "npm run kb:validate --prefix backend",
+    "kb:cases": "npm run kb:cases --prefix backend"
+  }
+}

@@ -11,26 +11,19 @@ A single-page home-insurance quoting tool. Customers enter their details and get
 
 **Prerequisites:** Node.js **22.22+ or 24.15+** (required by Angular 22) and npm. Docker is optional.
 
-The app is two services, and each one runs in **its own terminal**. Start the backend first. Both commands start from the repository root.
-
-**Terminal 1: backend API** → http://localhost:3000
+**Quick start: 2 commands from the repository root**
 ```bash
-cd backend
-npm install      # first time only
-npm start        # compiles TypeScript, then serves the API
+npm install      # installs backend and frontend (first time only)
+npm start        # starts both: API on :3000, UI on :4200, output prefixed [api] / [web]
 ```
-Ready when it logs `PolicyQuote API listening`.
+Open http://localhost:4200, click a **Try:** preset (Standard / Elevated / High risk), then **Get my quote**. `Ctrl+C` stops both. If either service fails to start, both are stopped and the command exits non-zero.
 
-**Terminal 2: frontend** → http://localhost:4200
-```bash
-cd frontend
-npm install      # first time only
-npm start        # Angular dev server; proxies /policy and /health to :3000
-```
+**Or run each service on its own** (each starts with a single `npm start`, as the brief requires). Use one terminal per service, starting from the repository root:
 
-**Use it:** open http://localhost:4200, click a **Try:** preset (Standard / Elevated / High risk), then **Get my quote**.
-
-That is 4 commands in total from a fresh clone (`npm install` + `npm start` in each folder). Stop either service with `Ctrl+C`.
+| | Backend API → http://localhost:3000 | Frontend → http://localhost:4200 |
+|---|---|---|
+| Commands | `cd backend` · `npm install` (first time) · `npm start` | `cd frontend` · `npm install` (first time) · `npm start` |
+| Ready when | it logs `PolicyQuote API listening` | it prints `Local: http://localhost:4200/` (proxies `/policy` and `/health` to :3000) |
 
 ### Alternative: backend in Docker
 Run from the repository root, then start the frontend as above:
@@ -49,12 +42,13 @@ curl -X POST http://localhost:3000/policy/quote -H "Content-Type: application/js
 ### Configuration (optional)
 | Variable | Default | Purpose |
 |---|---|---|
-| `PORT` | `3000` | Backend port. If you change it, also update `frontend/proxy.conf.json` |
-| `KB_PATH` | `<repo>/kb/risk-kb.json` | Knowledge Base file to load |
+| `PORT` | `3000` | Backend port. If you change it, also update `frontend/proxy.conf.json`. **Don't set it in the frontend's terminal**: `ng serve` also reads `PORT` (the root `npm start` handles this for you) |
+| `KB_PATH` | `<repo>/kb/risk-kb.json` | A KB file, **or a KB channel directory** of `risk-kb.v{N}.json` files (the engine loads the newest schema it supports; see [Architecture §5.7](docs/02-ARCHITECTURE.md)) |
 | `CORS_ORIGIN` | `*` | Allowed origin for direct (non-proxied) calls |
 
 ### Troubleshooting
-- **"Cannot reach the quote service" in the UI:** the backend isn't running on port 3000. Start Terminal 1.
+- **"Cannot reach the quote service" in the UI:** the backend isn't running on port 3000. Start it.
+- **"The latest rule-set edit was rejected" in the UI:** your KB edit is invalid, so the last valid rules are still pricing. `GET /health` shows `lastReloadError`, or run `npm run kb:validate`.
 - **Port already in use:** stop the other process, or start the backend with another `PORT` and update `frontend/proxy.conf.json`.
 - **Backend exits at startup with a `KnowledgeBaseError`:** the KB file is invalid. Run `cd backend && npm run kb:validate` to see the exact JSON path that is wrong.
 
