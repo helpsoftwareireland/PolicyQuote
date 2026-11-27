@@ -70,7 +70,7 @@ The UI validates first: the submit button stays **disabled** and inline errors a
 | V3 | Property value `0` | "Value must be greater than £0" | 400 · `propertyValue`: "Property value must be greater than 0" |
 | V4 | Claims `1.5` | "Must be a whole number" | 400 · `previousClaims`: "Claims must be a whole number" |
 | V5 | Postcode `sw1a1aa` (lower case, no space) | Accepted | 200. The API normalises it to `SW1A 1AA` and prices it like S01 (£30/£360) |
-| V6 | Stop the backend (`Ctrl+C`), then submit S01 | Red banner: "Something went wrong while generating your quote. Please try again." (dismissible). The dev proxy answers **502 Bad Gateway**, which the UI treats as a generic server error | n/a |
+| V6 | Stop the backend (`Ctrl+C`), then submit S01 | Red banner: "Cannot reach the quote service right now. Please try again in a moment." (dismissible). The dev proxy answers **502 Bad Gateway**, and the UI treats 0/502/503/504 as "unreachable" | n/a |
 
 V1 via the API, for the panel:
 ```bash

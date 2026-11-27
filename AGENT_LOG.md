@@ -104,6 +104,13 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 - The agent added a negative test for **`E1 6AN`**: a London "E" postcode must not match the "EX" prefix. It's the obvious edge case a reviewer will probe with `starts_with`.
 **Why:** Rehearsing on a branch proves the skill and the KB-only claim without spending the real demo.
 
+### 16. Demo scenarios document → found and fixed DEF-3
+**Prompts:** "generate a document Scenarios … a dozen of different possible Form entries", then "fix the bug, then commit and push everything"
+**Output:** `docs/05-DEMO-SCENARIOS.md`: 12 form entries, 6 validation/error cases, 5 live-KB-change cases, and panel questions mapped to scenarios. All expected values were computed by a script that runs each input through the compiled engine and real KB, so none are hand-calculated.
+**Rejected (the agent's own draft):** V6 originally claimed that stopping the backend shows "Cannot reach the quote service". That was **written from reading the code, not observed**, so the agent tested it with a second dev server proxying to a dead port. The real response was `502 Bad Gateway` (text/plain), which fell through to the generic error. The doc was corrected first, then the bug was raised with the user rather than fixed unasked.
+**Fix:** `toUserMessage` treats 0/502/503/504 as "unreachable". The API never returns those itself, so they always mean a proxy or gateway couldn't reach it. +4 tests (502/503/504 plus a non-JSON 418 fallback). Verified in Chrome against a real proxy 502. 42/42 frontend tests, clean type-check and build.
+**Why:** The same gap would exist in production behind CloudFront/API Gateway. Also a reminder: a scenario document is only as good as the scenarios actually executed.
+
 ---
 
 <!-- Template for new entries

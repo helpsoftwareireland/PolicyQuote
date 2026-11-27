@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ELEVATED_QUOTE, HIGH_RISK_QUOTE, REQUEST } from '../../../testing/quote.fixtures';
+import { UNREACHABLE_MESSAGE } from '../services/quote-api.service';
 import { QuoteStore } from './quote.store';
 
 describe('QuoteStore (signals: loading, quoteResult, errorMessage)', () => {
@@ -66,10 +67,29 @@ describe('QuoteStore (signals: loading, quoteResult, errorMessage)', () => {
     expect(store.errorMessage()).toBe('Something went wrong while generating your quote.');
   });
 
-  it('explains when the API is unreachable', () => {
+  it('explains when the API is unreachable (network failure, status 0)', () => {
     store.requestQuote(REQUEST);
     http.expectOne('/policy/quote').error(new ProgressEvent('error'));
-    expect(store.errorMessage()).toMatch(/Cannot reach the quote service/);
+    expect(store.errorMessage()).toBe(UNREACHABLE_MESSAGE);
+  });
+
+  // Regression (DEF-3): behind a proxy/gateway a dead backend is a 502/503/504 with a non-JSON body,
+  // which used to fall through to the generic "Something went wrong" message.
+  it.each([
+    [502, 'Bad Gateway'],
+    [503, 'Service Unavailable'],
+    [504, 'Gateway Timeout'],
+  ])('treats a gateway %i (%s) as "service unreachable"', (status, statusText) => {
+    store.requestQuote(REQUEST);
+    http.expectOne('/policy/quote').flush('Error occurred while trying to proxy', { status, statusText });
+    expect(store.errorMessage()).toBe(UNREACHABLE_MESSAGE);
+    expect(store.loading()).toBe(false);
+  });
+
+  it('falls back to a generic message for an unexpected non-JSON error', () => {
+    store.requestQuote(REQUEST);
+    http.expectOne('/policy/quote').flush('<html>teapot</html>', { status: 418, statusText: "I'm a teapot" });
+    expect(store.errorMessage()).toBe('Something went wrong while generating your quote. Please try again.');
   });
 
   it('clears a previous error when a new request starts, and dismissError() clears it', () => {

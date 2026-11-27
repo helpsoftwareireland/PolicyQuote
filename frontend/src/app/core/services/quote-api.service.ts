@@ -24,10 +24,19 @@ const isApiErrorBody = (value: unknown): value is ApiErrorBody =>
   typeof (value as { error: unknown }).error === 'object' &&
   (value as { error: object | null }).error !== null;
 
+/**
+ * "Service unreachable" statuses: 0 = the browser got no response at all; 502/503/504 = a proxy or
+ * gateway in front of the API (Angular dev server, CloudFront, API Gateway) could not reach it.
+ * The API itself never returns these, so they always mean "not reachable", not "request rejected".
+ */
+const UNREACHABLE_STATUSES: ReadonlySet<number> = new Set([0, 502, 503, 504]);
+
+export const UNREACHABLE_MESSAGE = 'Cannot reach the quote service right now. Please try again in a moment.';
+
 /** Map any HTTP failure to a message a customer can act on. */
 export function toUserMessage(err: unknown): string {
   if (!(err instanceof HttpErrorResponse)) return 'Something went wrong. Please try again.';
-  if (err.status === 0) return 'Cannot reach the quote service. Please check your connection and try again.';
+  if (UNREACHABLE_STATUSES.has(err.status)) return UNREACHABLE_MESSAGE;
   if (isApiErrorBody(err.error)) {
     const { message, issues } = err.error.error;
     if (issues && issues.length > 0) {

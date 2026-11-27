@@ -18,7 +18,7 @@
 | Backend coverage | (threshold 90 % lines) | ✅ 98.9 % lines · 94.0 % branches. `engine/` **100 %** |
 | KB validation | `cd backend && npm run kb:validate` | ✅ KB valid: v1.1.0, 6 factors, 3 contiguous bands |
 | Frontend type-check | `cd frontend && npm run lint:types` | ✅ 0 errors (strict templates) |
-| Frontend unit/component | `cd frontend && npm test` | ✅ **38 / 38** passed, 5 files |
+| Frontend unit/component | `cd frontend && npm test` | ✅ **42 / 42** passed, 5 files (38 at first run, +4 for DEF-3) |
 | Frontend production build | `cd frontend && npm run build` | ✅ 245 kB raw / 67 kB transfer, no warnings |
 | HTTP smoke (live server) | `curl` script, §4 | ✅ 11 / 11 checks |
 | Live-demo rehearsal | KB-only change on a running server, §5 | ✅ |
@@ -45,7 +45,7 @@
 | Spec | Tests | Covers |
 |---|---|---|
 | `risk-band-badge.component.spec.ts` | 5 | 3 bands → text + class + aria-label, unknown band → neutral, reactive input change |
-| `quote.store.spec.ts` | 8 | Initial state, POST body, `loading` toggling, `computed` values, 400 / 500 / network errors, error clearing, latest-request-wins cancellation |
+| `quote.store.spec.ts` | 12 | Initial state, POST body, `loading` toggling, `computed` values, 400 / 500 / network errors, gateway 502/503/504 → "unreachable", non-JSON fallback, error clearing, latest-request-wins cancellation |
 | `quote-form.component.spec.ts` | 13 | All brief fields, radio binding, disabled while invalid/busy, typed + normalised emit, 6 inline error messages, DOM↔form binding, presets |
 | `quote-result.component.spec.ts` | 8 | GBP premiums, badge per band, summary, KB factor list (ids, descriptions, ×occurrences, points, total), empty state, breakdown + KB version |
 | `quote-page.component.spec.ts` | 4 | Integration: empty → loading → result. `effect()` title. `afterRenderEffect()` focus. Dismissible error banner |
@@ -108,6 +108,7 @@ With the backend running, `flood_zone_postcode` (+15, `starts_with ["EX","PL"]`)
 |---|---|---|---|---|---|
 | DEF-1 | Medium | Smoke #10 | A body over 10 KB got an **empty reply** instead of 413: `req.destroy()` closed the socket before the response was written | Stop buffering, `req.resume()` to drain, reply 413 with `Connection: close` (`backend/src/server.ts`) | ✅ Fixed, re-tested |
 | DEF-2 | Low (test) | Vitest | Form spec read radio `.value` from the DOM. Angular's `RadioControlValueAccessor` binds `[value]` as a directive input, so the DOM value is `"on"` | Spec now asserts labels and the click → form-control binding | ✅ Fixed |
+| DEF-3 | Low (UX) | Demo-scenario check (V6) | With the backend down, the user saw the generic "Something went wrong" instead of "cannot reach the service". Behind any proxy or gateway (Angular dev server, CloudFront, API Gateway) a dead backend is a **502/503/504 with a non-JSON body**, but only status 0 was treated as "unreachable" | `toUserMessage` maps 0/502/503/504 to the unreachable message (`frontend/src/app/core/services/quote-api.service.ts`). +4 regression tests | ✅ Fixed. Verified in Chrome against a real dev-proxy 502 |
 
 ## 8. Known gaps / residual risk
 - The Docker image was verified locally only. It has not been deployed to ECS/Fargate.

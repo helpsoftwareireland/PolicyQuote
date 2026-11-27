@@ -95,7 +95,7 @@ Lambda handler: `backend/dist/handler.handler` (API Gateway REST v1 or HTTP API 
 ```bash
 cd backend  && npm test          # 143 Jest tests: 3 bands, operators, KB schema, extensibility, handler
 cd backend  && npm run test:coverage
-cd frontend && npm test          # 38 Vitest tests: store, form, result, badge, page
+cd frontend && npm test          # 42 Vitest tests: store, form, result, badge, page
 ```
 
 ## Docker (Fargate)
