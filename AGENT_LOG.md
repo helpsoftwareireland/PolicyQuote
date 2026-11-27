@@ -91,6 +91,19 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 - **Repo description had dropped characters** ("isk engine", missing comma) from simulated typing. The agent spotted it in the page title and corrected it with a direct form fill.
 **Why:** Publishing and authentication are the user's decisions. The agent's job was to make them explicit, not to make them silently.
 
+### 15. Live-demo rehearsal with the `add-kb-factor` skill
+**Prompt:** "rehearse the live demo with the add-kb-factor skill"
+**Output:** The skill ran end to end for the brief's example, flood zone postcode prefix (+15 if the postcode starts with EX or PL):
+1. **Translate:** field `postcode`, operator `starts_with`, `["EX","PL"]`. It is supported, so this is a KB-only change.
+2. **Edit:** appended `flood_zone_postcode` to `kb/risk-kb.json` and bumped `version` 1.1.0 → 1.2.0.
+3. **Prove:** `kb:validate` OK (7 factors). In the **running** app, with no restart, the same quote (40, House £300k, 1 claim, EX1 1AA) went from **STANDARD £30/£360 (score 15)** to **ELEVATED £45/£540 (score 30)**. The new factor was listed from its KB description and the footer showed "rule set v1.2.0". Two tests added to `kb-live.spec.ts`. 145/145 green.
+4. **Report:** `git diff --stat` showed only `kb/risk-kb.json` and `backend/test/kb-live.spec.ts`. `backend/src` and `frontend/src` were untouched.
+**Changed / decided:**
+- The rehearsal ran on a local branch, `rehearsal/flood-zone` (not pushed), and `main` was restored to KB 1.1.0. Merging it would pre-empt the panel's live request if they pick the brief's own example.
+- The agent chose a demo profile that **crosses a band boundary** (15 → 30) rather than one that only changes the score, so the effect shows in the price and badge, not just in a number.
+- The agent added a negative test for **`E1 6AN`**: a London "E" postcode must not match the "EX" prefix. It's the obvious edge case a reviewer will probe with `starts_with`.
+**Why:** Rehearsing on a branch proves the skill and the KB-only claim without spending the real demo.
+
 ---
 
 <!-- Template for new entries
