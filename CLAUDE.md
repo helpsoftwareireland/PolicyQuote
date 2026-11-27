@@ -28,6 +28,7 @@ You are working on **PolicyQuote**, a home-insurance quoting app: an Angular 22 
 ```bash
 cd backend  && npm test             # Jest (all bands, operators, KB extensibility, handler)
 cd backend  && npm run kb:validate  # validate kb/risk-kb.json against the schema
+cd backend  && npm run kb:cases     # print the boundary test cases generated from each KB factor
 cd backend  && npm run lint:types   # tsc --noEmit
 cd backend  && npm start            # http://localhost:3000 (KB hot-reloads on save)
 cd frontend && npm test             # Vitest via ng test

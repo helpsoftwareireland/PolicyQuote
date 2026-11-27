@@ -13,7 +13,8 @@
     "test": "npm run lint:types --silent && jest",
     "test:coverage": "npm run lint:types --silent && jest --coverage",
     "lint:types": "tsc -p tsconfig.json --noEmit",
-    "kb:validate": "npm run build --silent && node dist/cli/validate-kb.js"
+    "kb:validate": "npm run build --silent && node dist/cli/validate-kb.js",
+    "kb:cases": "npm run build --silent && node dist/cli/kb-cases.js"
   },
   "dependencies": {
     "zod": "^4.1.0"

@@ -149,6 +149,17 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 **Honest scope:** the selection logic is implemented and tested. The S3/AppConfig → `/tmp`/EFS transport is described, not built.
 **Why:** It decouples KB publication from engine deployment. That's the actual intent of "without redeploying the Lambda": a breaking KB change never forces a lock-step deploy.
 
+### 22. G3: code generated from the Knowledge Base (boundary test cases)
+**Prompt:** "fix the issues" (review item G3: the brief asks to "use the agent to generate code from the Knowledge Base — not just for boilerplate", and there was no evidence of it).
+**Output:**
+- `src/kb/kb-case-generator.ts` reads each KB factor's condition and derives boundary cases: just inside / just outside each threshold, one hit per prefix, and for AND "all true" plus "each child false", for OR the reverse. A probe registry mirrors the operator registry (no switch).
+- Expected points come from the operator *definitions*, not from running the engine, so it's an independent oracle.
+- `kb-generated-cases.spec.ts` runs them for every factor in the real KB (17 cases today). `npm run kb:cases` prints them.
+- Shown on a KB-only flood factor: 3 cases appeared with zero test code.
+- The skill now uses this instead of hand-written tests. 183/183.
+**Rejected (the agent's own first draft):** the first version merged probe values straight into a typed input. `tsc` rejected it (`string | number` isn't assignable to `age: number`). Instead of a cast, every generated input now goes through the real `QuoteRequestSchema`. That gave proper types *and* a new KB check: probes no valid request can reach (e.g. `age lt 18` → age 17) are reported as unreachable, and a factor that can never fire is flagged. That also exposed a validator gap: `eq propertyType "Castle"` passes `kb:validate`, but the generator flags it.
+**Why:** This is the KB-driven generation the brief asks for, and it removes the one manual step from the live demo.
+
 ---
 
 <!-- Template for new entries

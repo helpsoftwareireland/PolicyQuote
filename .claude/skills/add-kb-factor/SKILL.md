@@ -31,9 +31,10 @@ If the rule needs a field or operator that is **not** listed, stop and tell the 
 
 ## 3. Prove it
 1. `cd backend && npm run kb:validate` must print `KB valid`.
-2. Add a test case to `backend/test/kb-live.spec.ts` that loads the **real** KB and asserts that an input which should trigger the factor has it in `appliedFactors` with the right points, and one that should not trigger it doesn't.
-3. `cd backend && npm test` must be green.
-4. If the servers are running, no restart is needed: the KB hot-reloads. Re-submit the quote in the UI.
+2. `cd backend && npm run kb:cases` prints the boundary cases **generated from the KB** for the new factor (hits just inside, misses just outside). They run automatically in `npm test` (`kb-generated-cases.spec.ts`), so no hand-written test is needed for coverage. If it warns "no valid request can trigger", the condition is unreachable (e.g. `age lt 18`): stop and tell the user.
+3. Optional, for the demo: add a scenario test to `backend/test/kb-live.spec.ts` showing a business outcome (e.g. the factor moving a customer up a band).
+4. `cd backend && npm test` must be green.
+5. If the servers are running, no restart is needed: the KB hot-reloads. Re-submit the quote in the UI. If the UI shows "rule-set edit was rejected", the KB is invalid: run `kb:validate`.
 
 ## 4. Report
 - Show `git diff --stat` (expect only `kb/risk-kb.json` and the test file).
