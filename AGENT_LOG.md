@@ -118,6 +118,11 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 **Rejected:** One reviewer claim, partly: that the badge must show the KB band *label*. The brief only requires the *factors* to be KB-label driven, and the badge wording is the brief's own. The duplicated tone mapping it found was valid and kept.
 **Decided (the user gave no preference):** keep Reactive Forms but make them signal-driven, rather than Signal Forms (the brief literally says "Reactive form"). Keep the KB schema strict, but accept the brief's own example.
 
+### 18. G7 (backend): handler robustness and error typing
+**Prompt:** "save the review to docs and fix the issues" (review item G7).
+**Output:** `toHttpRequest(event)` moved inside the handler's `try`. Added an `errorMessage(err: unknown)` helper, which replaced five `(err as Error).message` casts. New test: a non-HTTP event (e.g. EventBridge) now returns a 500 instead of an unhandled rejection. 144/144.
+**Why:** A Lambda can be invoked by any trigger, and a cast on `unknown` is a type lie the "no `any`" spirit also rules out.
+
 ---
 
 <!-- Template for new entries

@@ -121,6 +121,13 @@ describe('Lambda handler(event, context) (FR-12, FR-20..22)', () => {
     expect(body.factorCount).toBeGreaterThan(0);
   });
 
+  it('500 (not an unhandled rejection) for a malformed, non-HTTP event', async () => {
+    const malformed = { detail: 'from EventBridge' } as unknown as RestApiEvent;
+    const res = await handler(malformed);
+    expect(res.statusCode).toBe(500);
+    expect(JSON.parse(res.body)).toMatchObject({ error: { code: 'INTERNAL_ERROR' } });
+  });
+
   it('500 with a generic message (no internals leaked) when the KB is broken', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'kb-bad-'));
     const badKb = path.join(dir, 'risk-kb.json');

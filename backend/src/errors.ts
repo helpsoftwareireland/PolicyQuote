@@ -1,5 +1,8 @@
 /** Typed domain errors. The handler maps each to an HTTP status (Architecture §8). */
 
+/** Safe message extraction for `catch (err: unknown)` — avoids `(err as Error)` casts. */
+export const errorMessage = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+
 export interface FieldIssue {
   readonly path: string;
   readonly message: string;

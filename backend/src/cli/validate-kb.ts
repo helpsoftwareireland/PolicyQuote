@@ -1,4 +1,4 @@
-import { KnowledgeBaseError } from '../errors';
+import { errorMessage, KnowledgeBaseError } from '../errors';
 import { loadKnowledgeBaseFromFile, resolveKbPath } from '../kb/kb.loader';
 
 /** `npm run kb:validate [path]` — for risk analysts and CI. Exit code 1 on any issue. */
@@ -15,7 +15,7 @@ try {
   console.log(`  factors: ${kb.factors.map((f) => `${f.id}(+${f.points}${f.perOccurrence ? '/occurrence' : ''})`).join(', ')}`);
 } catch (err) {
   console.error(`KB INVALID: ${filePath}`);
-  console.error(`  ${(err as Error).message}`);
+  console.error(`  ${errorMessage(err)}`);
   if (err instanceof KnowledgeBaseError) {
     err.issues.forEach((issue) => console.error(`  - ${issue.path || '(root)'}: ${issue.message}`));
   }

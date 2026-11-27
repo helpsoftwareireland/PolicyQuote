@@ -1,5 +1,5 @@
 import type { Context } from 'aws-lambda';
-import { BadRequestError, KnowledgeBaseError, ValidationError } from './errors';
+import { BadRequestError, errorMessage, KnowledgeBaseError, ValidationError } from './errors';
 import { corsHeaders, errorResponse, json, toHttpRequest, type HttpRequest, type LambdaHttpEvent, type LambdaHttpResult } from './http/http';
 import { getKnowledgeBase } from './kb/kb.loader';
 import { logger } from './logger';
@@ -51,7 +51,7 @@ function toErrorResult(err: unknown, requestId: string | undefined): LambdaHttpR
   if (err instanceof BadRequestError) return errorResponse(400, 'BAD_REQUEST', err.message);
   // KB and unexpected errors: log details server-side, return a generic message (BRD FR-21, NFR-08).
   const kbIssues = err instanceof KnowledgeBaseError ? err.issues : undefined;
-  logger.error('Unhandled error', { requestId, error: err instanceof Error ? err.message : String(err), kbIssues });
+  logger.error('Unhandled error', { requestId, error: errorMessage(err), kbIssues });
   return errorResponse(500, 'INTERNAL_ERROR', 'Something went wrong while generating your quote. Please try again.');
 }
 
@@ -59,9 +59,9 @@ export const handler = async (
   event: LambdaHttpEvent,
   context?: Pick<Context, 'awsRequestId'>,
 ): Promise<LambdaHttpResult> => {
-  const request = toHttpRequest(event);
   try {
-    return route(request);
+    // Inside the try: a malformed event (e.g. a non-HTTP trigger) must become a 500, not an unhandled rejection.
+    return route(toHttpRequest(event));
   } catch (err) {
     return toErrorResult(err, context?.awsRequestId);
   }

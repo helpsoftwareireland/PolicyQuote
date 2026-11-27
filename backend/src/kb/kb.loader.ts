@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { KnowledgeBaseError } from '../errors';
+import { errorMessage, KnowledgeBaseError } from '../errors';
 import { logger } from '../logger';
 import { flattenKbIssues, KnowledgeBaseSchema } from './kb.schema';
 import type { KnowledgeBase } from './kb.types';
@@ -32,13 +32,13 @@ export function loadKnowledgeBaseFromFile(filePath: string): KnowledgeBase {
   try {
     text = readFileSync(filePath, 'utf8');
   } catch (err) {
-    throw new KnowledgeBaseError(`Cannot read Knowledge Base at ${filePath}: ${(err as Error).message}`);
+    throw new KnowledgeBaseError(`Cannot read Knowledge Base at ${filePath}: ${errorMessage(err)}`);
   }
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch (err) {
-    throw new KnowledgeBaseError(`Knowledge Base is not valid JSON: ${(err as Error).message}`);
+    throw new KnowledgeBaseError(`Knowledge Base is not valid JSON: ${errorMessage(err)}`);
   }
   return parseKnowledgeBase(json);
 }
@@ -65,10 +65,10 @@ export function getKnowledgeBase(filePath: string = resolveKbPath()): KnowledgeB
     mtimeMs = statSync(filePath).mtimeMs;
   } catch (err) {
     if (previous) {
-      logger.error('KB file unavailable; serving last-known-good', { kbVersion: previous.kb.version, error: (err as Error).message });
+      logger.error('KB file unavailable; serving last-known-good', { kbVersion: previous.kb.version, error: errorMessage(err) });
       return previous.kb;
     }
-    throw new KnowledgeBaseError(`Cannot read Knowledge Base at ${filePath}: ${(err as Error).message}`);
+    throw new KnowledgeBaseError(`Cannot read Knowledge Base at ${filePath}: ${errorMessage(err)}`);
   }
 
   if (previous && previous.mtimeMs === mtimeMs) return previous.kb;
@@ -87,7 +87,7 @@ export function getKnowledgeBase(filePath: string = resolveKbPath()): KnowledgeB
     const issues = err instanceof KnowledgeBaseError ? err.issues : [];
     logger.error('KB reload rejected; serving last-known-good', {
       kbVersion: previous.kb.version,
-      error: (err as Error).message,
+      error: errorMessage(err),
       issues,
     });
     // Remember this mtime so a broken file isn't re-parsed on every request.
