@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators, type AbstractControl, type ValidationErrors } from '@angular/forms';
+import { merge } from 'rxjs';
 import { PROPERTY_TYPES, type PropertyType, type QuoteRequest } from '../../../core/models/quote.models';
 
 /** Same syntactic rule as the backend's Zod schema (BRD A-3). Server remains the source of truth. */
@@ -10,6 +11,8 @@ const wholeNumber = (control: AbstractControl<number | null>): ValidationErrors 
   control.value === null || Number.isInteger(control.value) ? null : { wholeNumber: true };
 
 type FieldName = keyof QuoteRequest;
+
+const FIELDS: readonly FieldName[] = ['customerName', 'age', 'propertyType', 'propertyValue', 'postcode', 'previousClaims'];
 
 const MESSAGES: Readonly<Record<FieldName, Readonly<Record<string, string>>>> = {
   customerName: { required: 'Please enter your name', minlength: 'Name must be at least 2 characters', maxlength: 'Name is too long' },
@@ -61,17 +64,34 @@ export class QuoteFormComponent {
     previousClaims: this.fb.control<number | null>(0, [Validators.required, Validators.min(0), Validators.max(50), wholeNumber]),
   });
 
-  /** Bridge reactive-form status into the signal graph. */
-  private readonly status = toSignal(this.form.statusChanges, { initialValue: this.form.status });
-  readonly canSubmit = computed(() => this.status() === 'VALID' && !this.busy());
+  /**
+   * Bridge Reactive Forms into the signal graph (review G6). Reactive Forms state is not signal-native, so
+   * every control's unified `events` stream (value, status, touched, pristine) feeds one signal.
+   * Per-control streams are merged on purpose: a FormGroup only emits `touched` the *first* time any
+   * child is touched (see `markAsTouched` in @angular/forms), so tabbing past a second empty field would
+   * otherwise never surface its error. (Signal Forms, stable in v22, would make this bridge unnecessary.)
+   */
+  private readonly formChange = toSignal(
+    merge(this.form.events, ...Object.values(this.form.controls).map((control) => control.events)),
+    { initialValue: null },
+  );
 
-  /** First error message for a touched field, or null. */
-  protected errorFor(field: FieldName): string | null {
-    const control = this.form.controls[field];
-    if (!control.touched || !control.errors) return null;
-    const key = Object.keys(control.errors)[0];
-    return key ? (MESSAGES[field][key] ?? 'Invalid value') : null;
-  }
+  /** Field → message, for touched invalid fields. The template reads only signals — no method calls. */
+  protected readonly fieldErrors = computed((): Partial<Record<FieldName, string>> => {
+    this.formChange();
+    const errors: Partial<Record<FieldName, string>> = {};
+    for (const field of FIELDS) {
+      const control = this.form.controls[field];
+      const key = control.touched && control.errors ? Object.keys(control.errors)[0] : undefined;
+      if (key) errors[field] = MESSAGES[field][key] ?? 'Invalid value';
+    }
+    return errors;
+  });
+
+  readonly canSubmit = computed(() => {
+    this.formChange();
+    return this.form.valid && !this.busy();
+  });
 
   protected applyPreset(preset: Preset): void {
     this.form.setValue({ ...preset.value });

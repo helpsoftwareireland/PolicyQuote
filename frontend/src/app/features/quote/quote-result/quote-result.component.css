@@ -16,7 +16,7 @@
   --band-accent: var(--band-elevated-fg);
 }
 
-.result[data-band='high-risk'] {
+.result[data-band='high'] {
   --band-accent: var(--band-high-fg);
 }
 

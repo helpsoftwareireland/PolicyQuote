@@ -160,6 +160,18 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 **Rejected (the agent's own first draft):** the first version merged probe values straight into a typed input. `tsc` rejected it (`string | number` isn't assignable to `age: number`). Instead of a cast, every generated input now goes through the real `QuoteRequestSchema`. That gave proper types *and* a new KB check: probes no valid request can reach (e.g. `age lt 18` → age 17) are reported as unreachable, and a factor that can never fire is flagged. That also exposed a validator gap: `eq propertyType "Castle"` passes `kb:validate`, but the generator flags it.
 **Why:** This is the KB-driven generation the brief asks for, and it removes the one manual step from the live demo.
 
+### 23. G6 + G7 (frontend): signal-driven form state; remove duplication
+**Prompt:** "fix the issues" (G6: form errors came from an `errorFor()` method called 10× in the template, plus dead store `computed`s and two band→tone mappings; G7: `CurrencyPipe` injected as a provider).
+**Output:**
+- **Form:** every control's `events` stream feeds one signal (`toSignal`). `fieldErrors` and `canSubmit` are `computed()`, and the template reads only signals.
+- **Store:** removed `hasResult`, `appliedFactors` and `totalFactorPoints`, which only tests used.
+- **Result:** "Total" now shows `riskScore` instead of recomputing it.
+- **Tone:** one `riskBandTone()` mapping shared by the badge and the result.
+- **Page:** the tab title uses `formatCurrency` + `LOCALE_ID` instead of injecting a pipe.
+- 44/44, build and type-check clean.
+**Caught by reading the framework source, not by assuming:** a `FormGroup` emits `touched` only the *first* time any child is touched (`markAsTouched` → `if (changed …)`). Bridging only `form.events` would miss tabbing past a second empty field. The agent merged per-control streams and wrote a regression test, then **proved the test bites**: with group-only events it fails ("1 failed | 43 passed"), with the fix it passes.
+**Decided:** Reactive Forms kept (the brief says "Reactive form"). Signal Forms (stable in v22) is documented as the next step in docs/06.
+
 ---
 
 <!-- Template for new entries

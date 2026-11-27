@@ -1,5 +1,14 @@
-import { ChangeDetectionStrategy, Component, ElementRef, afterRenderEffect, effect, inject, viewChild } from '@angular/core';
-import { CurrencyPipe } from '@angular/common';
+import { formatCurrency, getCurrencySymbol } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  LOCALE_ID,
+  afterRenderEffect,
+  effect,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import type { QuoteRequest } from '../../../core/models/quote.models';
 import { QuoteStore } from '../../../core/state/quote.store';
@@ -14,7 +23,6 @@ const BASE_TITLE = 'PolicyQuote';
 @Component({
   selector: 'pq-quote-page',
   imports: [QuoteFormComponent, QuoteResultComponent],
-  providers: [CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quote-page.component.html',
   styleUrl: './quote-page.component.css',
@@ -22,15 +30,20 @@ const BASE_TITLE = 'PolicyQuote';
 export class QuotePageComponent {
   protected readonly store = inject(QuoteStore);
   private readonly title = inject(Title);
-  private readonly currency = inject(CurrencyPipe);
+  private readonly locale = inject(LOCALE_ID);
   private readonly resultPanel = viewChild<ElementRef<HTMLElement>>('resultPanel');
 
   constructor() {
     // Side effect 1: keep the browser tab title in sync with the latest quote.
     effect(() => {
       const quote = this.store.quoteResult();
-      const monthly = quote ? this.currency.transform(quote.monthlyPremium, quote.currency, 'symbol', '1.2-2') : null;
-      this.title.setTitle(monthly ? `${monthly}/month · ${BASE_TITLE}` : BASE_TITLE);
+      if (!quote) {
+        this.title.setTitle(BASE_TITLE);
+        return;
+      }
+      const symbol = getCurrencySymbol(quote.currency, 'narrow', this.locale);
+      const monthly = formatCurrency(quote.monthlyPremium, this.locale, symbol, quote.currency, '1.2-2');
+      this.title.setTitle(`${monthly}/month · ${BASE_TITLE}`);
     });
 
     // Side effect 2 (a11y): when a new quote arrives, move focus to it so keyboard and

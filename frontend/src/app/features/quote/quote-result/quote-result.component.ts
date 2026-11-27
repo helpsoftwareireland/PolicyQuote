@@ -1,6 +1,7 @@
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { QuoteResponse } from '../../../core/models/quote.models';
+import { riskBandTone } from '../../../core/models/risk-band-tone';
 import { RiskBandBadgeComponent } from '../risk-band-badge/risk-band-badge.component';
 
 /**
@@ -18,6 +19,6 @@ export class QuoteResultComponent {
   readonly quote = input.required<QuoteResponse>();
 
   protected readonly factors = computed(() => this.quote().appliedFactors);
-  protected readonly totalPoints = computed(() => this.factors().reduce((sum, f) => sum + f.points, 0));
-  protected readonly bandTone = computed(() => this.quote().riskBand.toLowerCase().replace(/_/g, '-'));
+  /** Same tone mapping as the badge — one source (core/models/risk-band-tone.ts). */
+  protected readonly bandTone = computed(() => riskBandTone(this.quote().riskBand));
 }

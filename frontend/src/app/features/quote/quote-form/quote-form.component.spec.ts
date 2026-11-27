@@ -83,6 +83,15 @@ describe('QuoteFormComponent (FR-01..04)', () => {
     expect(host.querySelector(`#${id}`)?.getAttribute('aria-invalid')).toBe('true');
   });
 
+  it('shows the error of a second empty field tabbed past after another field was touched', async () => {
+    // Regression guard for the form.events bridge: once the group is touched, it emits no further
+    // touched events — only the child control does. Field errors are signals, so this must still update.
+    await typeInto('customerName', 'Sam Patel');
+    host.querySelector<HTMLInputElement>('#age')?.dispatchEvent(new Event('blur'));
+    await fixture.whenStable();
+    expect(host.querySelector('#age-error')?.textContent?.trim()).toBe('Please enter your age');
+  });
+
   it('binds the DOM to the reactive form', async () => {
     await typeInto('age', '45');
     expect(component.form.controls.age.value).toBe(45);

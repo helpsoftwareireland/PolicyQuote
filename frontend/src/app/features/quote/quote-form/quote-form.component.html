@@ -12,8 +12,8 @@
   <div class="field field--full">
     <label for="customerName">Full name</label>
     <input id="customerName" type="text" formControlName="customerName" autocomplete="name"
-           [attr.aria-invalid]="!!errorFor('customerName')" aria-describedby="customerName-error" />
-    @if (errorFor('customerName'); as error) {
+           [attr.aria-invalid]="!!fieldErrors().customerName" aria-describedby="customerName-error" />
+    @if (fieldErrors().customerName; as error) {
       <p id="customerName-error" class="field__error">{{ error }}</p>
     }
   </div>
@@ -21,8 +21,8 @@
   <div class="field">
     <label for="age">Age</label>
     <input id="age" type="number" inputmode="numeric" formControlName="age" min="18" max="120"
-           [attr.aria-invalid]="!!errorFor('age')" aria-describedby="age-error" />
-    @if (errorFor('age'); as error) {
+           [attr.aria-invalid]="!!fieldErrors().age" aria-describedby="age-error" />
+    @if (fieldErrors().age; as error) {
       <p id="age-error" class="field__error">{{ error }}</p>
     }
   </div>
@@ -30,8 +30,8 @@
   <div class="field">
     <label for="postcode">Postcode</label>
     <input id="postcode" type="text" formControlName="postcode" autocomplete="postal-code" class="uppercase"
-           [attr.aria-invalid]="!!errorFor('postcode')" aria-describedby="postcode-error" />
-    @if (errorFor('postcode'); as error) {
+           [attr.aria-invalid]="!!fieldErrors().postcode" aria-describedby="postcode-error" />
+    @if (fieldErrors().postcode; as error) {
       <p id="postcode-error" class="field__error">{{ error }}</p>
     }
   </div>
@@ -53,9 +53,9 @@
     <div class="input-affix">
       <span class="input-affix__prefix" aria-hidden="true">£</span>
       <input id="propertyValue" type="number" inputmode="numeric" formControlName="propertyValue" min="1" step="1000"
-             [attr.aria-invalid]="!!errorFor('propertyValue')" aria-describedby="propertyValue-error" />
+             [attr.aria-invalid]="!!fieldErrors().propertyValue" aria-describedby="propertyValue-error" />
     </div>
-    @if (errorFor('propertyValue'); as error) {
+    @if (fieldErrors().propertyValue; as error) {
       <p id="propertyValue-error" class="field__error">{{ error }}</p>
     }
   </div>
@@ -63,8 +63,8 @@
   <div class="field">
     <label for="previousClaims">Claims in last 5 years</label>
     <input id="previousClaims" type="number" inputmode="numeric" formControlName="previousClaims" min="0" max="50"
-           [attr.aria-invalid]="!!errorFor('previousClaims')" aria-describedby="previousClaims-error" />
-    @if (errorFor('previousClaims'); as error) {
+           [attr.aria-invalid]="!!fieldErrors().previousClaims" aria-describedby="previousClaims-error" />
+    @if (fieldErrors().previousClaims; as error) {
       <p id="previousClaims-error" class="field__error">{{ error }}</p>
     }
   </div>

@@ -21,8 +21,7 @@ describe('QuoteStore (signals: loading, quoteResult, errorMessage)', () => {
     expect(store.loading()).toBe(false);
     expect(store.quoteResult()).toBeNull();
     expect(store.errorMessage()).toBeNull();
-    expect(store.hasResult()).toBe(false);
-    expect(store.appliedFactors()).toEqual([]);
+    expect(store.kbStale()).toBe(false);
   });
 
   it('POSTs to /policy/quote, toggles loading, and stores the result', () => {
@@ -36,15 +35,6 @@ describe('QuoteStore (signals: loading, quoteResult, errorMessage)', () => {
 
     expect(store.loading()).toBe(false);
     expect(store.quoteResult()).toEqual(ELEVATED_QUOTE);
-    expect(store.hasResult()).toBe(true);
-  });
-
-  it('derives appliedFactors and totalFactorPoints with computed()', () => {
-    store.requestQuote(REQUEST);
-    http.expectOne('/policy/quote').flush(HIGH_RISK_QUOTE);
-
-    expect(store.appliedFactors().map((f) => f.id)).toContain('flat_high_value');
-    expect(store.totalFactorPoints()).toBe(180);
   });
 
   it('kbStale reflects the X-KB-Status header (G4: a rejected KB edit is never silent)', () => {

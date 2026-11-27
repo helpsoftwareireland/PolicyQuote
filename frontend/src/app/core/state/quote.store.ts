@@ -1,11 +1,12 @@
-import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { finalize, type Subscription } from 'rxjs';
-import type { AppliedFactor, QuoteRequest, QuoteResponse } from '../models/quote.models';
+import type { QuoteRequest, QuoteResponse } from '../models/quote.models';
 import { QuoteApiService, toUserMessage } from '../services/quote-api.service';
 
 /**
  * Signal-based UI state for the quote journey (BRD NFR-04).
- * Writable signals are private; components get read-only views and derived `computed` state.
+ * Writable signals are private; components get read-only views. Derived view state lives in the
+ * components that use it (`computed` there), so nothing here is computed "just in case".
  * No BehaviorSubject/Subject: RxJS stops at the HttpClient call.
  */
 @Injectable({ providedIn: 'root' })
@@ -23,10 +24,6 @@ export class QuoteStore {
   readonly errorMessage = this._errorMessage.asReadonly();
   /** The last quote was priced with an older rule set because the latest KB edit was rejected. */
   readonly kbStale = this._kbStale.asReadonly();
-
-  readonly hasResult = computed(() => this._quoteResult() !== null);
-  readonly appliedFactors = computed<readonly AppliedFactor[]>(() => this._quoteResult()?.appliedFactors ?? []);
-  readonly totalFactorPoints = computed(() => this.appliedFactors().reduce((sum, f) => sum + f.points, 0));
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.inFlight?.unsubscribe());
