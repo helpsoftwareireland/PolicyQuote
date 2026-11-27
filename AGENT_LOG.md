@@ -111,6 +111,13 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 **Fix:** `toUserMessage` treats 0/502/503/504 as "unreachable". The API never returns those itself, so they always mean a proxy or gateway couldn't reach it. +4 tests (502/503/504 plus a non-JSON 418 fallback). Verified in Chrome against a real proxy 502. 42/42 frontend tests, clean type-check and build.
 **Why:** The same gap would exist in production behind CloudFront/API Gateway. Also a reminder: a scenario document is only as good as the scenarios actually executed.
 
+### 17. Critical review against the brief and the BRD
+**Prompt:** "You are a Critical Reviewer … compare with the BRD and the original assessment … is there any advantages of using Signal Form when we are now on angular 22. Is the app use Signals?", then "save the review to docs and fix the issues".
+**Output:** `docs/06-CRITICAL-REVIEW.md`, with 9 gaps (G1–G9) plus BRD corrections, ranked by rubric impact.
+**How:** The agent had written all the code, so it **spawned an independent reviewer subagent** and gave it the PDF and the code, not the author's conclusions, to avoid an anchored review. Meanwhile it checked the Angular 22 API status in the installed packages rather than from memory: Signal Forms stable (`@publicApi 22.0`), OnPush now the default, `httpResource` stable. It also measured the layout at 360 px in Chrome.
+**Rejected:** One reviewer claim, partly: that the badge must show the KB band *label*. The brief only requires the *factors* to be KB-label driven, and the badge wording is the brief's own. The duplicated tone mapping it found was valid and kept.
+**Decided (the user gave no preference):** keep Reactive Forms but make them signal-driven, rather than Signal Forms (the brief literally says "Reactive form"). Keep the KB schema strict, but accept the brief's own example.
+
 ---
 
 <!-- Template for new entries
