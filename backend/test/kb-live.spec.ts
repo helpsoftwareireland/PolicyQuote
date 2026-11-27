@@ -39,4 +39,20 @@ describe('production KB (kb/risk-kb.json)', () => {
     expect(ids({ propertyType: 'Flat', propertyValue: 400000 })).toEqual(['property_type_flat']);
     expect(ids({ propertyType: 'House', propertyValue: 600000 })).toEqual([]);
   });
+
+  it('flood_zone_postcode: London "E" postcodes must not match the "EX" prefix', () => {
+    // Boundary cases are generated from the KB (kb-generated-cases.spec.ts); this is the human edge case.
+    expect(ids({ postcode: 'E1 6AN' })).not.toContain('flood_zone_postcode');
+    expect(ids({ postcode: 'ex4 3sr' })).toContain('flood_zone_postcode'); // case-insensitive
+  });
+
+  it('flood_zone_postcode can move a customer up a band (demo scenario S12)', () => {
+    // 1 claim (15) + flood zone (15) = 30 → ELEVATED: £540/yr, £45/month
+    expect(priceQuote(baseInput({ postcode: 'EX1 1AA', previousClaims: 1 }), kb)).toMatchObject({
+      riskScore: 30,
+      riskBand: 'ELEVATED',
+      annualPremium: 540,
+      monthlyPremium: 45,
+    });
+  });
 });

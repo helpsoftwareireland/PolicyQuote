@@ -213,6 +213,20 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 
 **Note for the review session:** most rejections in this log are the agent's self-corrections (entries 2, 8, 9, 12, 19, 22, 23, 24), each surfaced to the candidate. The candidate's own steering is the table above.
 
+### 28. Flood-zone factor added with the `add-kb-factor` skill
+**Prompt:** "add the flood zone factor with the add-kb-factor skill" (flood zone postcode prefix, +15 if the postcode starts with EX or PL).
+**Output:**
+1. **Translate:** `postcode` + `starts_with` `["EX","PL"]` (case-insensitive). Supported, so this is KB-only.
+2. **Edit:** appended `flood_zone_postcode` to `kb/risk-kb.json`, and `version` 1.1.0 → 1.2.0.
+3. **Prove:**
+   - `kb:validate` OK (7 factors).
+   - `kb:cases` generated 3 boundary cases (EX hit, PL hit, non-matching miss), which run automatically in `npm test`.
+   - Added 2 human scenario tests: London `E1 6AN` must *not* match `EX`, and the factor moves S12 up a band.
+   - 189/189.
+   - In the running app, with no restart, the same quote (40, House £300k, 1 claim, EX1 1AA) went from **STANDARD £30/£360 (15)** to **ELEVATED £45/£540 (30)**, the new factor was listed, and the footer read "rule set v1.2.0".
+4. **Report:** `git diff --stat` = `kb/risk-kb.json` + `backend/test/kb-live.spec.ts` only. Nothing under `backend/src` or `frontend/src` changed.
+**Compared with the rehearsal (entry 15):** the boundary tests are now generated from the KB (entry 22), so the only hand-written tests are the two that carry business meaning.
+
 ---
 
 <!-- Template for new entries
