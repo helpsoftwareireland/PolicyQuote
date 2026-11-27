@@ -66,9 +66,25 @@ describe('risk engine', () => {
       expect(resolveBand(30, kb.riskBands)).toMatchObject({ id: 'ELEVATED', riskMultiplier: 1.5, label: 'Elevated' });
     });
 
-    it('throws KnowledgeBaseError when no band covers the score (BR-2)', () => {
-      const gappy = { LOW: { min: 0, max: 10, riskMultiplier: 1, label: 'Low', summary: 'Low.' } };
-      expect(() => resolveBand(11, gappy)).toThrow(KnowledgeBaseError);
+    it('throws KnowledgeBaseError when a score falls in a gap between bands (BR-2)', () => {
+      // Unreachable with a validated KB (contiguity is enforced); the engine still fails loudly.
+      const gappy = {
+        LOW: { min: 0, max: 10, riskMultiplier: 1, label: 'Low', summary: 'Low.' },
+        HIGH: { min: 20, max: null, riskMultiplier: 2, label: 'High', summary: 'High.' },
+      };
+      expect(() => resolveBand(15, gappy)).toThrow(KnowledgeBaseError);
+    });
+
+    it("treats the highest band as open-ended even with a finite max (the brief's 999)", () => {
+      const briefBands = buildKb({
+        riskBands: {
+          STANDARD: { min: 0, max: 25, riskMultiplier: 1.0, label: 'Standard', summary: 's' },
+          ELEVATED: { min: 26, max: 60, riskMultiplier: 1.5, label: 'Elevated', summary: 'e' },
+          HIGH_RISK: { min: 61, max: 999, riskMultiplier: 2.2, label: 'High risk', summary: 'h' },
+        },
+      }).riskBands;
+      expect(resolveBand(999, briefBands).id).toBe('HIGH_RISK');
+      expect(resolveBand(1500, briefBands).id).toBe('HIGH_RISK'); // e.g. 50 claims × 30 points
     });
   });
 

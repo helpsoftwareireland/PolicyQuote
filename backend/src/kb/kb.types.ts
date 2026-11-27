@@ -75,15 +75,21 @@ export interface RiskFactor {
   readonly perOccurrence?: boolean;
   /** Field to count for perOccurrence; defaults to the leaf condition's own field. */
   readonly occurrenceField?: ScoringField;
+  /** Free-text analyst notes (rationale, ticket, source). Never shown to customers or used in scoring. */
+  readonly notes?: string;
 }
 
 export interface RiskBandDefinition {
   readonly min: number;
-  /** `null` = open-ended top band. */
+  /**
+   * Inclusive upper bound. `null` = open-ended. The **highest** band is always treated as open-ended,
+   * so a finite value there (e.g. the brief's 999) is documentation, not a cap.
+   */
   readonly max: number | null;
   readonly riskMultiplier: number;
   readonly label: string;
   readonly summary: string;
+  readonly notes?: string;
 }
 
 export interface KnowledgeBase {

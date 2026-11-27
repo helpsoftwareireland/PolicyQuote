@@ -50,7 +50,12 @@ export function scoreRisk(input: ScoringInput, factors: readonly RiskFactor[]): 
 }
 
 export function resolveBand(score: number, bands: KnowledgeBase['riskBands']): ResolvedBand {
-  const match = Object.entries(bands).find(([, band]) => score >= band.min && (band.max === null || score <= band.max));
+  const entries = Object.entries(bands);
+  // The highest band is open-ended whatever its max says (KB convention, see RiskBandDefinition.max).
+  const highestMin = Math.max(...entries.map(([, band]) => band.min));
+  const match = entries.find(
+    ([, band]) => score >= band.min && (band.max === null || score <= band.max || band.min === highestMin),
+  );
   if (!match) {
     // BRD BR-2: a gap in the bands is a KB configuration error (the validator should have caught it).
     throw new KnowledgeBaseError(`No risk band covers score ${score}`);

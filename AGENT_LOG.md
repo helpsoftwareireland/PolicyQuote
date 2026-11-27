@@ -134,6 +134,15 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 **Decided:** `/health` stays **200** while stale. The service is still pricing correctly, and a failing health check would make ECS restart the task, losing the in-memory last-known-good KB and then failing to boot on the broken file.
 **Agent mistake, caught:** the first attempt rewrote the loader's tail with a shell one-liner built from nested heredocs. It **silently truncated `kb.loader.ts`**. The agent read the file back, saw the truncation, restored it with a proper edit and reviewed the full `git diff` before running tests. Lesson applied: use the edit tool for multi-line code changes, never shell string surgery.
 
+### 20. G8: accept the brief's own KB example; allow analyst notes
+**Prompt:** "fix the issues" (review item G8: the validator rejected the brief's `"max": 999`).
+**Output:**
+- The highest band may have a finite `max`. `resolveBand` treats the highest band as open-ended whatever its max says, so scores like 1,500 (50 claims) still map to HIGH_RISK, and `kb:validate` shows "999 (open-ended)".
+- Optional `notes` on factors and bands for analyst rationale.
+- `.strict()` is kept: a typo like `descripton` is still rejected (tested).
+- The gap test was rewritten to use a real gap between two bands. +2 tests (148).
+**Rejected alternative:** making `label`/`summary`/`schemaVersion` optional so the brief's example validates verbatim. The brief's example has no multipliers at all (they're in a table), so it can never price unmodified. Customer-facing summary text (FR-07) should stay mandatory.
+
 ---
 
 <!-- Template for new entries

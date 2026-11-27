@@ -42,6 +42,19 @@ describe('KB schema validation (KB-07)', () => {
     ).not.toThrow();
   });
 
+  it("accepts the brief's literal band shape (top band max 999) and analyst notes (G8)", () => {
+    const issues = issuesFor((kb) => {
+      bands(kb).HIGH_RISK!.max = 999;
+      bands(kb).HIGH_RISK!.notes = 'Brief example: 61+';
+      factors(kb)[0]!.notes = 'Source: underwriting guide 2026, section 3';
+    });
+    expect(issues).toEqual([]);
+  });
+
+  it('still rejects unknown keys, so typos cannot slip through silently', () => {
+    expect(issuesFor((kb) => (factors(kb)[0]!.descripton = 'typo'))).not.toEqual([]);
+  });
+
   describe('structural errors point at the exact path', () => {
     it.each<[string, (kb: Json) => void, string]>([
       ['missing max on between', (kb) => delete factors(kb)[1]!.condition, 'factors[1].condition'],
@@ -114,7 +127,6 @@ describe('KB schema validation (KB-07)', () => {
       ['lowest band not starting at 0', (kb) => (bands(kb).STANDARD!.min = 5), /lowest band must start at 0/],
       ['gap between bands', (kb) => (bands(kb).ELEVATED!.min = 27), /must be contiguous \(expected min 26\)/],
       ['band max < min', (kb) => (bands(kb).ELEVATED!.max = 20), /ELEVATED has max < min/],
-      ['top band not open-ended', (kb) => (bands(kb).HIGH_RISK!.max = 999), /highest band must be open-ended/],
       ['open-ended band that is not the highest', (kb) => (bands(kb).ELEVATED!.max = null), /open-ended but is not the highest/],
     ])('%s', (_name, mutate, expected) => {
       expect(issuesFor(mutate).join('\n')).toMatch(expected);

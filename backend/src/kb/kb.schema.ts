@@ -75,6 +75,7 @@ const RiskBandSchema = z
     riskMultiplier: z.number().positive(),
     label: z.string().min(1),
     summary: z.string().min(1),
+    notes: z.string().optional(),
   })
   .strict();
 
@@ -86,6 +87,7 @@ const RiskFactorSchema = z
     points: z.number().int().min(0),
     perOccurrence: z.boolean().optional(),
     occurrenceField: FieldSchema.optional(),
+    notes: z.string().optional(),
   })
   .strict();
 
@@ -127,10 +129,8 @@ function checkBands(kb: KbDraft, report: Report): void {
       report(['riskBands', id, 'min'], `Bands ${prevId} and ${id} must be contiguous (expected min ${prevBand.max + 1})`);
     }
   });
-  const [lastId, lastBand] = bands[bands.length - 1] ?? [];
-  if (lastId && lastBand && lastBand.max !== null) {
-    report(['riskBands', lastId, 'max'], 'The highest band must be open-ended (max: null) so every score maps to a band');
-  }
+  // No check on the highest band's max: `null` and a finite value (e.g. the brief's 999) are both valid,
+  // because resolveBand always treats the highest band as open-ended — every score maps to a band.
 }
 
 const scalarMatchesField = (value: Scalar, fieldType: FieldType): boolean => typeof value === fieldType;

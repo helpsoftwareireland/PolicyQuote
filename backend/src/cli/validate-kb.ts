@@ -6,8 +6,14 @@ const filePath = process.argv[2] ?? resolveKbPath();
 
 try {
   const kb = loadKnowledgeBaseFromFile(filePath);
-  const bands = Object.entries(kb.riskBands)
-    .map(([id, b]) => `${id} ${b.min}-${b.max ?? '∞'} ×${b.riskMultiplier}`)
+  const entries = Object.entries(kb.riskBands);
+  const highestMin = Math.max(...entries.map(([, b]) => b.min));
+  const bands = entries
+    .map(([id, b]) => {
+      // The highest band is open-ended whatever its max says; make that visible to the analyst.
+      const upper = b.min === highestMin ? (b.max === null ? '∞' : `${b.max} (open-ended)`) : String(b.max);
+      return `${id} ${b.min}-${upper} ×${b.riskMultiplier}`;
+    })
     .join(', ');
   console.log(`KB valid: ${filePath}`);
   console.log(`  version ${kb.version} (schema ${kb.schemaVersion}), ${kb.factors.length} factors`);
