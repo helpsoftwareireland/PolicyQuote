@@ -191,6 +191,28 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 - Final regression: 183 + 44 tests, coverage, build, static checks, `kb:cases`, root `npm start`, Docker image, and the stale-KB notice verified in Chrome against a deliberately broken KB *copy* (the repo KB was never touched).
 **Left for the candidate (G1):** add your own entries: what *you* rejected or changed in the agent's output and why. The panel will ask, and only you can answer it truthfully.
 
+### 27. Candidate review and decisions (human in the loop)
+**Prompt:** "All was approved so AGENT_LOG should have everything then push"
+**Candidate's verdict:** all agent output in entries 1–26 was reviewed and **approved without further changes**.
+
+**Decisions the candidate made during the session** (as recorded in the conversation, in order):
+
+| # | Decision | Effect |
+|---|---|---|
+| 1 | Chose a role-staged workflow: BA → Architect → Engineer → QA | Requirements, then design, then plan, then tests, each building on the last (entries 1–3) |
+| 2 | Asked for the Docker build to be actually run, not just written | Exposed the agent's false "Docker not available" claim (entry 12) |
+| 3 | Asked for the start commands to be documented | README "Run it" rewritten |
+| 4 | Asked to upgrade to the latest Angular with TypeScript | Accepted the agent's peer-range finding: Angular 22.3 + TS **6.0.3**, not TS 7 (entry 13) |
+| 5 | Named the repo `PolicyQuote` and chose **Public** visibility when asked | Matches the brief's "public GitHub repository" deliverable (entry 14) |
+| 6 | Signed in to GitHub personally when the agent handed authentication back | Credentials stayed with the candidate (entry 14) |
+| 7 | Asked for a live-demo rehearsal with the project skill | Rehearsal kept on a local branch so the real demo isn't pre-empted (entry 15) |
+| 8 | Asked for a demo-scenarios document, then for the bug it exposed to be fixed | DEF-3 fixed and verified in Chrome (entry 16) |
+| 9 | Asked for an independent critical review, including whether Signal Forms is worth adopting on Angular 22 | docs/06 (entry 17) |
+| 10 | Approved the agent's recommendations on the review's open choices: keep **Reactive Forms** but make them signal-driven; keep the **KB schema strict** but accept the brief's example | Entries 20 and 23 |
+| 11 | Approved all fixes G2–G9 and the BRD corrections, and authorised pushing to the public repo | This push |
+
+**Note for the review session:** most rejections in this log are the agent's self-corrections (entries 2, 8, 9, 12, 19, 22, 23, 24), each surfaced to the candidate. The candidate's own steering is the table above.
+
 ---
 
 <!-- Template for new entries

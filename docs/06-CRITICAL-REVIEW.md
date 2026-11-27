@@ -83,7 +83,7 @@ Each fix is a separate commit with its own AGENT_LOG entry (17–25). The full r
 
 | # | Status | What was done | Commit |
 |---|---|---|---|
-| G1 | ◐ Agent side done | Fixes made as small, separately committed and logged steps (9 commits, entries 17–25). **Outstanding, and it has to be the candidate:** add your own rejections and decisions to AGENT_LOG. Do not backfill prompts that never happened | `f70bc3c`…`08d2058` |
+| G1 | ✅ | Fixes made as small, separately committed and logged steps (entries 17–26). The candidate reviewed and approved all agent output, and their own decisions are recorded in AGENT_LOG entry 27. No prompts were backfilled | `f70bc3c`…latest |
 | G2 | ✅ | KB channel (`risk-kb.v{N}.json`, newest supported schema wins), with a simulated rollout test. Architecture §5.7 and SOLUTION rewritten | `9d75eb7` |
 | G3 | ✅ | `kb-case-generator.ts` + `npm run kb:cases`: boundary tests generated from every KB factor, with unreachable-probe detection | `5a9dc09` |
 | G4 | ✅ | `/health` `kbStatus` + `lastReloadError`, `X-KB-Status` header, UI notice. Verified in Chrome | `5d4e39c` |
