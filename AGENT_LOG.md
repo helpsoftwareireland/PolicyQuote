@@ -80,6 +80,17 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 - `ts-jest` then warned that Node16 modules need `isolatedModules: true`. The agent set it, which means Jest now transpiles without type-checking, so `npm test` was changed to run `tsc --noEmit` first. The safety net is kept.
 **Why:** Upgrading to the newest version that the ecosystem *supports* beats the newest that exists. Migration shims that only preserve old behaviour shouldn't stay in a codebase without a reason.
 
+### 14. Git setup, first commit and GitHub repo
+**Prompt:** "set up git and make the first commit, create a git repo called PolicyQuote"
+**Output:** `git init -b main`, staged files reviewed (no `node_modules`, build output or secrets), first commit `bebfbda` (77 files). The agent then created the public repo `helpsoftwareireland/PolicyQuote` through the GitHub web UI and pushed `main`.
+**Changed / decided:**
+- **The assessment PDF was left out** (added to `.gitignore`). It is the hiring company's document, and the brief asks for a public repo.
+- **Added `.gitattributes` (`* text=auto eol=lf`).** The global `core.autocrlf` printed CRLF warnings on every file. LF in the repo keeps Windows, Linux CI and the Docker build consistent.
+- **Visibility:** the agent asked rather than assumed, because "public" publishes the code immediately. The user chose Public.
+- **`gh` was not installed**, so the repo was created in Chrome. Chrome showed GitHub's login page with saved credentials autofilled. **The agent did not sign in**, stopped, and handed authentication back to the user. It resumed once the user had signed in.
+- **Repo description had dropped characters** ("isk engine", missing comma) from simulated typing. The agent spotted it in the page title and corrected it with a direct form fill.
+**Why:** Publishing and authentication are the user's decisions. The agent's job was to make them explicit, not to make them silently.
+
 ---
 
 <!-- Template for new entries
