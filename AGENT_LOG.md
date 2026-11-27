@@ -178,6 +178,11 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 **Found by running it, not by reading it:** the first run (API on `PORT=3005`) showed `ng serve` **also honours `PORT`**, so both services bound 3005. That's a latent trap for anyone following the README's `PORT` setting. Fix: the UI gets an environment without `PORT` and an explicit `--port 4200`, and the README now warns about it. The run also printed Node's DEP0190 warning (args array with `shell: true`), fixed by passing one constant command string.
 **Verified:** API on 3005 and UI on 4200 both answer. The ports are free after stopping. With 3000 already taken, the API fails with `EADDRINUSE`, the UI is stopped too, and the exit code is 1.
 
+### 25. G9: Lambda packaging documented
+**Prompt:** "fix the issues" (G9: no Lambda packaging story; the default KB path is outside a bundle; mtime hot reload is inert on Lambda's read-only filesystem).
+**Output:** Architecture §9 and the README now specify the bundle contents, the handler (`dist/handler.handler`), `KB_PATH=/var/task/kb/risk-kb.json`, and why a bundled KB needs a redeploy while a KB channel on EFS or `/tmp` doesn't.
+**Rejected:** a `package:lambda` script. Zipping needs either a platform-specific tool (`zip` / `Compress-Archive`) or a new dependency, for a deliverable the brief doesn't ask to deploy. Documentation is the proportionate fix; the Docker image is the verified deployable.
+
 ---
 
 <!-- Template for new entries

@@ -314,7 +314,13 @@ RxJS is used **only** at the HTTP boundary (`HttpClient` returns an `Observable`
 ## 9. Deployment views
 
 - **Local:** `backend: npm start` (tsc → `node dist/server.js` on :3000), `frontend: npm start` (`ng serve` on :4200 with proxy).
-- **Lambda:** bundle `dist/` + KB. Handler `dist/handler.handler`. API Gateway HTTP API route `POST /policy/quote`.
+- **Lambda:**
+  - **Bundle (zip root):** `dist/`, production `node_modules/` (`npm ci --omit=dev`), `package.json` and `kb/risk-kb.json`.
+  - **Handler:** `dist/handler.handler`. Runtime `nodejs22.x`.
+  - **Routes:** API Gateway HTTP API (v2) or REST (v1): `POST /policy/quote` and `GET /health`. Both event shapes are supported.
+  - **Set `KB_PATH=/var/task/kb/risk-kb.json`.** The default path assumes the repo layout (`<repo>/kb`), which is outside a Lambda bundle.
+  - **The bundle is read-only**, so mtime hot reload never fires there, and changing a *bundled* KB means a redeploy. For KB changes without redeploys, point `KB_PATH` at a **KB channel** (§5.7) on EFS or synced to `/tmp` from S3/AppConfig. The loader then picks up new files on the next invocation.
+  - The KB is parsed once per cold start and cached in the warm container.
 - **Fargate (bonus):** multi-stage Dockerfile. Builder stage compiles TS. Runtime stage has prod deps only, runs as a non-root `node` user, `HEALTHCHECK` hits `/health`, KB copied to `/app/kb` (or mounted / pulled from S3 via `KB_PATH`).
 
 ## 10. Architecture decision records (summary)

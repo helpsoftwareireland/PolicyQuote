@@ -32,6 +32,9 @@ docker build -f backend/Dockerfile -t policyquote-api .
 docker run -p 3000:3000 policyquote-api
 ```
 
+### Deploying as an AWS Lambda
+Zip `backend/dist`, production dependencies (`npm ci --omit=dev` in `backend/`), `backend/package.json` and `kb/risk-kb.json`. Set handler `dist/handler.handler` and **`KB_PATH=/var/task/kb/risk-kb.json`**: the default KB path assumes the repo layout. A bundled KB is read-only, so to change rules without redeploying, point `KB_PATH` at a KB channel on EFS or `/tmp` instead (see [Architecture §5.7 and §9](docs/02-ARCHITECTURE.md)).
+
 ### Quick checks
 ```bash
 curl http://localhost:3000/health
