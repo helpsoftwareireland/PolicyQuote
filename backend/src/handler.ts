@@ -1,7 +1,7 @@
 import type { Context } from 'aws-lambda';
 import { BadRequestError, errorMessage, KnowledgeBaseError, ValidationError } from './errors';
 import { corsHeaders, errorResponse, json, toHttpRequest, type HttpRequest, type LambdaHttpEvent, type LambdaHttpResult } from './http/http';
-import { getKnowledgeBase } from './kb/kb.loader';
+import { getKnowledgeBase, getKnowledgeBaseStatus } from './kb/kb.loader';
 import { logger } from './logger';
 import { createQuote } from './quote/quote.service';
 
@@ -21,11 +21,28 @@ function parseJsonBody(body: string | null): unknown {
   }
 }
 
-const postQuote: RouteHandler = (request) => json(200, createQuote(parseJsonBody(request.body), getKnowledgeBase()));
+/** `X-KB-Status: stale` tells clients the KB on disk was rejected and an older rule set priced this quote. */
+const kbStatusHeaders = (): Record<string, string> =>
+  getKnowledgeBaseStatus().kbStatus === 'stale' ? { 'X-KB-Status': 'stale' } : {};
 
+const postQuote: RouteHandler = (request) => {
+  const quote = createQuote(parseJsonBody(request.body), getKnowledgeBase());
+  return json(200, quote, kbStatusHeaders());
+};
+
+/**
+ * Stays 200 even when the KB is stale: the service is still pricing correctly with the last-known-good
+ * rules, and failing the health check would make ECS restart the task and lose that in-memory KB.
+ */
 const getHealth: RouteHandler = () => {
   const kb = getKnowledgeBase();
-  return json(200, { status: 'ok', kbVersion: kb.version, schemaVersion: kb.schemaVersion, factorCount: kb.factors.length });
+  return json(200, {
+    status: 'ok',
+    kbVersion: kb.version,
+    schemaVersion: kb.schemaVersion,
+    factorCount: kb.factors.length,
+    ...getKnowledgeBaseStatus(),
+  });
 };
 
 /** Route table: path → method → handler. */

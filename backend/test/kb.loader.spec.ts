@@ -2,7 +2,14 @@ import { mkdtempSync, rmSync, unlinkSync, utimesSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { KnowledgeBaseError } from '../src/errors';
-import { DEFAULT_KB_PATH, getKnowledgeBase, loadKnowledgeBaseFromFile, resetKnowledgeBaseCache, resolveKbPath } from '../src/kb/kb.loader';
+import {
+  DEFAULT_KB_PATH,
+  getKnowledgeBase,
+  getKnowledgeBaseStatus,
+  loadKnowledgeBaseFromFile,
+  resetKnowledgeBaseCache,
+  resolveKbPath,
+} from '../src/kb/kb.loader';
 import { BASE_KB_JSON } from './fixtures/kb.fixture';
 
 describe('KB loader (KB-07, KB-09)', () => {
@@ -64,11 +71,29 @@ describe('KB loader (KB-07, KB-09)', () => {
     expect(getKnowledgeBase(kbFile).version).toBe('1.2.0');
   });
 
+  it('reports a rejected reload as "stale" until a valid KB is saved (G4: never silent)', () => {
+    writeKb(kbJson('1.0.0'));
+    getKnowledgeBase(kbFile);
+    expect(getKnowledgeBaseStatus()).toEqual({ kbStatus: 'current' });
+
+    writeKb(JSON.stringify({ ...BASE_KB_JSON, version: '1.1.0', basePremium: -5 }));
+    expect(getKnowledgeBase(kbFile).version).toBe('1.0.0');
+    const stale = getKnowledgeBaseStatus();
+    expect(stale.kbStatus).toBe('stale');
+    expect(stale.lastReloadError).toMatchObject({ filePath: kbFile, message: 'Knowledge Base failed validation' });
+    expect(stale.lastReloadError?.issues[0]?.path).toBe('basePremium');
+
+    writeKb(kbJson('1.2.0'));
+    expect(getKnowledgeBase(kbFile).version).toBe('1.2.0');
+    expect(getKnowledgeBaseStatus()).toEqual({ kbStatus: 'current' });
+  });
+
   it('keeps serving the last-known-good KB if the file disappears', () => {
     writeKb(kbJson('1.0.0'));
     getKnowledgeBase(kbFile);
     unlinkSync(kbFile);
     expect(getKnowledgeBase(kbFile).version).toBe('1.0.0');
+    expect(getKnowledgeBaseStatus().kbStatus).toBe('stale');
   });
 
   it('fails fast with KnowledgeBaseError when there is no good KB at all', () => {

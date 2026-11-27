@@ -47,6 +47,17 @@ describe('QuoteStore (signals: loading, quoteResult, errorMessage)', () => {
     expect(store.totalFactorPoints()).toBe(180);
   });
 
+  it('kbStale reflects the X-KB-Status header (G4: a rejected KB edit is never silent)', () => {
+    store.requestQuote(REQUEST);
+    http.expectOne('/policy/quote').flush(ELEVATED_QUOTE, { headers: { 'X-KB-Status': 'stale' } });
+    expect(store.kbStale()).toBe(true);
+    expect(store.quoteResult()).toEqual(ELEVATED_QUOTE); // still priced, with the last valid rules
+
+    store.requestQuote(REQUEST);
+    http.expectOne('/policy/quote').flush(ELEVATED_QUOTE);
+    expect(store.kbStale()).toBe(false);
+  });
+
   it('maps a 400 validation response to a readable, field-level message', () => {
     store.requestQuote(REQUEST);
     http.expectOne('/policy/quote').flush(

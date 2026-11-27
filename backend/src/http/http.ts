@@ -51,6 +51,7 @@ export const corsHeaders = (): Record<string, string> => ({
   'Access-Control-Allow-Origin': process.env.CORS_ORIGIN ?? '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Expose-Headers': 'X-KB-Status',
 });
 
 export function json(statusCode: number, payload: unknown, extraHeaders: Record<string, string> = {}): LambdaHttpResult {

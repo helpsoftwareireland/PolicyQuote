@@ -54,6 +54,17 @@ describe('QuotePageComponent (integration: form → store → result)', () => {
     expect(document.activeElement?.id).toBe('result-title');
   });
 
+  it('warns when the quote was priced with a stale KB (X-KB-Status: stale)', async () => {
+    await submitValidForm();
+    http.expectOne('/policy/quote').flush(ELEVATED_QUOTE, { headers: { 'X-KB-Status': 'stale' } });
+    await fixture.whenStable();
+
+    const notice = host.querySelector('[data-testid="kb-stale"]');
+    expect(notice?.textContent).toContain('rule-set edit was rejected');
+    expect(notice?.textContent).toContain('v1.1.0');
+    expect(host.querySelector('[data-testid="monthly-premium"]')).not.toBeNull();
+  });
+
   it('shows a dismissible error banner on failure', async () => {
     await submitValidForm();
     http.expectOne('/policy/quote').flush(

@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { errorMessage, KnowledgeBaseError } from '../errors';
+import { errorMessage, KnowledgeBaseError, type FieldIssue } from '../errors';
 import { logger } from '../logger';
 import { flattenKbIssues, KnowledgeBaseSchema } from './kb.schema';
 import type { KnowledgeBase } from './kb.types';
@@ -49,13 +49,39 @@ interface CacheEntry {
   readonly kb: KnowledgeBase;
 }
 
+/** Why the KB on disk is not the one being served (review item G4). */
+export interface KbReloadError {
+  readonly at: string;
+  readonly filePath: string;
+  readonly message: string;
+  readonly issues: readonly FieldIssue[];
+}
+
+export interface KnowledgeBaseStatus {
+  /** `stale` = the file on disk was rejected; the last-known-good KB is still serving. */
+  readonly kbStatus: 'current' | 'stale';
+  readonly lastReloadError?: KbReloadError;
+}
+
 let cache: CacheEntry | undefined;
+let lastReloadError: KbReloadError | undefined;
+
+function rejectReload(previous: CacheEntry, filePath: string, err: unknown): KnowledgeBase {
+  const issues = err instanceof KnowledgeBaseError ? err.issues : [];
+  lastReloadError = { at: new Date().toISOString(), filePath, message: errorMessage(err), issues };
+  logger.error('KB reload rejected; serving last-known-good', {
+    kbVersion: previous.kb.version,
+    error: lastReloadError.message,
+    issues,
+  });
+  return previous.kb;
+}
 
 /**
  * Cached KB for the warm Lambda container / server process (Architecture §5.6).
  * - Re-validates when the file's mtime changes → KB edits apply without a restart.
- * - If the new file is invalid, keeps serving the last-known-good KB and logs the issues,
- *   so a typo in the KB never takes pricing down.
+ * - If the new file is invalid or missing, keeps serving the last-known-good KB, logs the issues and
+ *   records them so `/health` and the `X-KB-Status` header surface the problem (never silent).
  */
 export function getKnowledgeBase(filePath: string = resolveKbPath()): KnowledgeBase {
   const previous = cache?.filePath === filePath ? cache : undefined;
@@ -64,10 +90,7 @@ export function getKnowledgeBase(filePath: string = resolveKbPath()): KnowledgeB
   try {
     mtimeMs = statSync(filePath).mtimeMs;
   } catch (err) {
-    if (previous) {
-      logger.error('KB file unavailable; serving last-known-good', { kbVersion: previous.kb.version, error: errorMessage(err) });
-      return previous.kb;
-    }
+    if (previous) return rejectReload(previous, filePath, err);
     throw new KnowledgeBaseError(`Cannot read Knowledge Base at ${filePath}: ${errorMessage(err)}`);
   }
 
@@ -76,6 +99,7 @@ export function getKnowledgeBase(filePath: string = resolveKbPath()): KnowledgeB
   try {
     const kb = loadKnowledgeBaseFromFile(filePath);
     cache = { filePath, mtimeMs, kb };
+    lastReloadError = undefined;
     logger.info(previous ? 'KB reloaded' : 'KB loaded', {
       kbVersion: kb.version,
       previousVersion: previous?.kb.version,
@@ -84,19 +108,19 @@ export function getKnowledgeBase(filePath: string = resolveKbPath()): KnowledgeB
     return kb;
   } catch (err) {
     if (!previous) throw err;
-    const issues = err instanceof KnowledgeBaseError ? err.issues : [];
-    logger.error('KB reload rejected; serving last-known-good', {
-      kbVersion: previous.kb.version,
-      error: errorMessage(err),
-      issues,
-    });
     // Remember this mtime so a broken file isn't re-parsed on every request.
     cache = { ...previous, mtimeMs };
-    return previous.kb;
+    return rejectReload(previous, filePath, err);
   }
+}
+
+export function getKnowledgeBaseStatus(): KnowledgeBaseStatus {
+  return lastReloadError ? { kbStatus: 'stale', lastReloadError } : { kbStatus: 'current' };
 }
 
 /** Test hook. */
 export function resetKnowledgeBaseCache(): void {
   cache = undefined;
+  lastReloadError = undefined;
 }
+

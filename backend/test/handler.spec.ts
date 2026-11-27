@@ -1,12 +1,12 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyEventV2 } from 'aws-lambda';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { handler } from '../src/handler';
 import type { RestApiEvent } from '../src/http/http';
 import { resetKnowledgeBaseCache } from '../src/kb/kb.loader';
 import type { QuoteResponse } from '../src/quote/quote.types';
-import { baseInput } from './fixtures/kb.fixture';
+import { BASE_KB_JSON, baseInput } from './fixtures/kb.fixture';
 
 const restEvent = (method: string, eventPath: string, body?: unknown): RestApiEvent => ({
   httpMethod: method,
@@ -119,6 +119,37 @@ describe('Lambda handler(event, context) (FR-12, FR-20..22)', () => {
     expect(body.status).toBe('ok');
     expect(body.schemaVersion).toBe(1);
     expect(body.factorCount).toBeGreaterThan(0);
+  });
+
+  it('flags a rejected KB edit: X-KB-Status header on quotes and kbStatus on /health (G4)', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kb-stale-'));
+    const kbFile = path.join(dir, 'risk-kb.json');
+    process.env.KB_PATH = kbFile;
+    try {
+      writeFileSync(kbFile, JSON.stringify(BASE_KB_JSON));
+      const fresh = await handler(restEvent('POST', '/policy/quote', baseInput()));
+      expect(fresh.headers['X-KB-Status']).toBeUndefined();
+      expect(parse<{ kbStatus: string }>((await handler(restEvent('GET', '/health'))).body).kbStatus).toBe('current');
+
+      writeFileSync(kbFile, '{ "broken": ');
+      const later = Date.now() / 1000 + 60;
+      utimesSync(kbFile, later, later); // guarantee a new mtime on coarse filesystems
+
+      const stale = await handler(restEvent('POST', '/policy/quote', baseInput()));
+      expect(stale.statusCode).toBe(200); // still priced, with the last-known-good KB
+      expect(stale.headers['X-KB-Status']).toBe('stale');
+      expect(stale.headers['Access-Control-Expose-Headers']).toContain('X-KB-Status');
+
+      const health = await handler(restEvent('GET', '/health'));
+      expect(health.statusCode).toBe(200);
+      expect(parse<{ kbStatus: string; lastReloadError: { message: string } }>(health.body)).toMatchObject({
+        kbStatus: 'stale',
+        lastReloadError: { message: expect.stringMatching(/not valid JSON/) },
+      });
+    } finally {
+      delete process.env.KB_PATH;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('500 (not an unhandled rejection) for a malformed, non-HTTP event', async () => {

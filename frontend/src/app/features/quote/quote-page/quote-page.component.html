@@ -12,6 +12,12 @@
     }
 
     @if (store.quoteResult(); as quote) {
+      @if (store.kbStale()) {
+        <p class="notice" role="status" data-testid="kb-stale">
+          The latest rule-set edit was rejected by validation, so this quote used the last valid rules
+          (v{{ quote.kbVersion }}). Check the API log or <code>/health</code>.
+        </p>
+      }
       <div [class.is-stale]="store.loading()">
         <pq-quote-result [quote]="quote" />
       </div>

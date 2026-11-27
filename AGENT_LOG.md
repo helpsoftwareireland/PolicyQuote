@@ -123,6 +123,17 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 **Output:** `toHttpRequest(event)` moved inside the handler's `try`. Added an `errorMessage(err: unknown)` helper, which replaced five `(err as Error).message` casts. New test: a non-HTTP event (e.g. EventBridge) now returns a 500 instead of an unhandled rejection. 144/144.
 **Why:** A Lambda can be invoked by any trigger, and a cast on `unknown` is a type lie the "no `any`" spirit also rules out.
 
+### 19. G4: a rejected KB edit is never silent
+**Prompt:** "fix the issues" (review item G4: a typo in the KB during the live demo would look like "the factor doesn't work").
+**Output:**
+- The loader records `lastReloadError` (time, file, message, field issues) and exposes `getKnowledgeBaseStatus()`.
+- `/health` returns `kbStatus: "current" | "stale"` plus the error.
+- Quotes priced with a last-known-good KB carry `X-KB-Status: stale`, exposed via CORS.
+- The UI shows a notice: "The latest rule-set edit was rejected … this quote used the last valid rules (vX)". It's driven by a new `kbStale` signal.
+- +3 backend tests (146) and +2 frontend tests (44).
+**Decided:** `/health` stays **200** while stale. The service is still pricing correctly, and a failing health check would make ECS restart the task, losing the in-memory last-known-good KB and then failing to boot on the broken file.
+**Agent mistake, caught:** the first attempt rewrote the loader's tail with a shell one-liner built from nested heredocs. It **silently truncated `kb.loader.ts`**. The agent read the file back, saw the truncation, restored it with a proper edit and reviewed the full `git diff` before running tests. Lesson applied: use the edit tool for multi-line code changes, never shell string surgery.
+
 ---
 
 <!-- Template for new entries

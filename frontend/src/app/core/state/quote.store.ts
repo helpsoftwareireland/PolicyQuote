@@ -16,10 +16,13 @@ export class QuoteStore {
   private readonly _loading = signal(false);
   private readonly _quoteResult = signal<QuoteResponse | null>(null);
   private readonly _errorMessage = signal<string | null>(null);
+  private readonly _kbStale = signal(false);
 
   readonly loading = this._loading.asReadonly();
   readonly quoteResult = this._quoteResult.asReadonly();
   readonly errorMessage = this._errorMessage.asReadonly();
+  /** The last quote was priced with an older rule set because the latest KB edit was rejected. */
+  readonly kbStale = this._kbStale.asReadonly();
 
   readonly hasResult = computed(() => this._quoteResult() !== null);
   readonly appliedFactors = computed<readonly AppliedFactor[]>(() => this._quoteResult()?.appliedFactors ?? []);
@@ -39,9 +42,13 @@ export class QuoteStore {
       .requestQuote(request)
       .pipe(finalize(() => this._loading.set(false)))
       .subscribe({
-        next: (quote) => this._quoteResult.set(quote),
+        next: ({ quote, kbStale }) => {
+          this._quoteResult.set(quote);
+          this._kbStale.set(kbStale);
+        },
         error: (err: unknown) => {
           this._quoteResult.set(null);
+          this._kbStale.set(false);
           this._errorMessage.set(toUserMessage(err));
         },
       });

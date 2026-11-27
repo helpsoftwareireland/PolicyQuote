@@ -38,6 +38,17 @@
   font-size: 0.9rem;
 }
 
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--band-elevated-border);
+  background: var(--band-elevated-bg);
+  color: var(--band-elevated-fg);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
 .alert__close {
   font: inherit;
   font-size: 1.2rem;

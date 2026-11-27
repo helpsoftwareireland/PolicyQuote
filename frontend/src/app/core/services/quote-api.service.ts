@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, InjectionToken, inject } from '@angular/core';
-import type { Observable } from 'rxjs';
+import { map, type Observable } from 'rxjs';
 import type { ApiErrorBody, QuoteRequest, QuoteResponse } from '../models/quote.models';
 
 /** Base URL for the API. Empty = same origin (dev server proxies /policy → :3000). */
@@ -12,9 +12,23 @@ export class QuoteApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL);
 
-  requestQuote(request: QuoteRequest): Observable<QuoteResponse> {
-    return this.http.post<QuoteResponse>(`${this.baseUrl}/policy/quote`, request);
+  requestQuote(request: QuoteRequest): Observable<QuoteResult> {
+    return this.http.post<QuoteResponse>(`${this.baseUrl}/policy/quote`, request, { observe: 'response' }).pipe(
+      map((response) => {
+        if (!response.body) throw new Error('Empty quote response');
+        return { quote: response.body, kbStale: response.headers.get(KB_STATUS_HEADER) === 'stale' };
+      }),
+    );
   }
+}
+
+/** Set by the API when the KB on disk was rejected and the last-known-good rules priced the quote. */
+export const KB_STATUS_HEADER = 'X-KB-Status';
+
+export interface QuoteResult {
+  readonly quote: QuoteResponse;
+  /** True when the server is pricing with an older rule set because the latest KB edit failed validation. */
+  readonly kbStale: boolean;
 }
 
 const isApiErrorBody = (value: unknown): value is ApiErrorBody =>
