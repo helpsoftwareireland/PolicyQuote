@@ -1,0 +1,62 @@
+@let q = quote();
+<article class="result" [attr.data-band]="bandTone()" aria-labelledby="result-title">
+  <header class="result__head">
+    <h2 id="result-title" class="result__title" tabindex="-1">Your quote</h2>
+    <pq-risk-band-badge [riskBand]="q.riskBand" />
+  </header>
+
+  <div class="premiums">
+    <div class="premium premium--primary">
+      <span class="premium__label">Monthly</span>
+      <span class="premium__value" data-testid="monthly-premium">{{ q.monthlyPremium | currency: q.currency : 'symbol' : '1.2-2' }}</span>
+    </div>
+    <div class="premium">
+      <span class="premium__label">Annual</span>
+      <span class="premium__value" data-testid="annual-premium">{{ q.annualPremium | currency: q.currency : 'symbol' : '1.2-2' }}</span>
+    </div>
+  </div>
+
+  <p class="summary" data-testid="risk-summary">{{ q.riskSummary }}</p>
+
+  <section class="factors" aria-labelledby="factors-title">
+    <div class="factors__head">
+      <h3 id="factors-title">Risk factors applied</h3>
+      <span class="score">Risk score <strong>{{ q.riskScore }}</strong></span>
+    </div>
+
+    @if (factors().length > 0) {
+      <ul class="factors__list">
+        @for (factor of factors(); track factor.id) {
+          <li class="factor" [attr.data-factor-id]="factor.id">
+            <span class="factor__desc">
+              {{ factor.description }}
+              @if (factor.occurrences > 1) {
+                <span class="factor__occ">× {{ factor.occurrences }}</span>
+              }
+            </span>
+            <span class="factor__points">+{{ factor.points }}</span>
+          </li>
+        }
+        <li class="factor factor--total">
+          <span>Total</span>
+          <span class="factor__points">{{ totalPoints() }}</span>
+        </li>
+      </ul>
+    } @else {
+      <p class="factors__empty">No risk factors applied — nothing in your profile increases the risk.</p>
+    }
+  </section>
+
+  <details class="breakdown">
+    <summary>How we calculated this</summary>
+    <dl>
+      <div><dt>Base premium</dt><dd>{{ q.coverageDetails.basePremium | currency: q.currency : 'symbol' : '1.2-2' }}</dd></div>
+      <div><dt>Risk multiplier ({{ q.riskBandLabel }})</dt><dd>× {{ q.coverageDetails.riskMultiplier }}</dd></div>
+      <div><dt>Coverage load factor</dt><dd>× {{ q.coverageDetails.coverageLoadFactor }}</dd></div>
+      <div><dt>Property</dt><dd>{{ q.coverageDetails.propertyType }} · {{ q.coverageDetails.propertyValue | currency: q.currency : 'symbol' : '1.0-0' }}</dd></div>
+      <div class="breakdown__total"><dt>Annual premium</dt><dd>{{ q.annualPremium | currency: q.currency : 'symbol' : '1.2-2' }}</dd></div>
+    </dl>
+  </details>
+
+  <footer class="result__foot">Priced with rule set v{{ q.kbVersion }} · {{ factors().length | number }} factor(s) matched</footer>
+</article>

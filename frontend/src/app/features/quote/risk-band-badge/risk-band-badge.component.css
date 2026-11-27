@@ -1,0 +1,48 @@
+:host {
+  display: inline-flex;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.8rem 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.badge__dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge--standard {
+  color: var(--band-standard-fg);
+  background: var(--band-standard-bg);
+  border-color: var(--band-standard-border);
+}
+
+.badge--elevated {
+  color: var(--band-elevated-fg);
+  background: var(--band-elevated-bg);
+  border-color: var(--band-elevated-border);
+}
+
+.badge--high {
+  color: var(--band-high-fg);
+  background: var(--band-high-bg);
+  border-color: var(--band-high-border);
+}
+
+.badge--neutral {
+  color: var(--text-muted);
+  background: var(--surface-sunken);
+  border-color: var(--border);
+}

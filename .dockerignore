@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/coverage
+frontend
+docs
+.git
+.claude
+*.md

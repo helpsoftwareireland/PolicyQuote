@@ -1,0 +1,79 @@
+<form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate aria-labelledby="form-title">
+  <div class="form__head">
+    <h2 id="form-title" class="form__title">Your details</h2>
+    <div class="presets" role="group" aria-label="Fill with a sample profile">
+      <span class="presets__label">Try:</span>
+      @for (preset of presets; track preset.label) {
+        <button type="button" class="chip" (click)="applyPreset(preset)">{{ preset.label }}</button>
+      }
+    </div>
+  </div>
+
+  <div class="field field--full">
+    <label for="customerName">Full name</label>
+    <input id="customerName" type="text" formControlName="customerName" autocomplete="name"
+           [attr.aria-invalid]="!!errorFor('customerName')" aria-describedby="customerName-error" />
+    @if (errorFor('customerName'); as error) {
+      <p id="customerName-error" class="field__error">{{ error }}</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="age">Age</label>
+    <input id="age" type="number" inputmode="numeric" formControlName="age" min="18" max="120"
+           [attr.aria-invalid]="!!errorFor('age')" aria-describedby="age-error" />
+    @if (errorFor('age'); as error) {
+      <p id="age-error" class="field__error">{{ error }}</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="postcode">Postcode</label>
+    <input id="postcode" type="text" formControlName="postcode" autocomplete="postal-code" class="uppercase"
+           [attr.aria-invalid]="!!errorFor('postcode')" aria-describedby="postcode-error" />
+    @if (errorFor('postcode'); as error) {
+      <p id="postcode-error" class="field__error">{{ error }}</p>
+    }
+  </div>
+
+  <fieldset class="field field--full segmented">
+    <legend>Property type</legend>
+    <div class="segmented__options">
+      @for (type of propertyTypes; track type) {
+        <label class="segmented__option">
+          <input type="radio" formControlName="propertyType" [value]="type" />
+          <span>{{ type }}</span>
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <div class="field">
+    <label for="propertyValue">Property value</label>
+    <div class="input-affix">
+      <span class="input-affix__prefix" aria-hidden="true">£</span>
+      <input id="propertyValue" type="number" inputmode="numeric" formControlName="propertyValue" min="1" step="1000"
+             [attr.aria-invalid]="!!errorFor('propertyValue')" aria-describedby="propertyValue-error" />
+    </div>
+    @if (errorFor('propertyValue'); as error) {
+      <p id="propertyValue-error" class="field__error">{{ error }}</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="previousClaims">Claims in last 5 years</label>
+    <input id="previousClaims" type="number" inputmode="numeric" formControlName="previousClaims" min="0" max="50"
+           [attr.aria-invalid]="!!errorFor('previousClaims')" aria-describedby="previousClaims-error" />
+    @if (errorFor('previousClaims'); as error) {
+      <p id="previousClaims-error" class="field__error">{{ error }}</p>
+    }
+  </div>
+
+  <button type="submit" class="submit" [disabled]="!canSubmit()">
+    @if (busy()) {
+      <span class="spinner" aria-hidden="true"></span> Calculating…
+    } @else {
+      Get my quote
+    }
+  </button>
+</form>

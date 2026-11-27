@@ -1,0 +1,5 @@
+# Normalise line endings in the repo (Windows dev, Linux CI/Docker)
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+*.jpg binary

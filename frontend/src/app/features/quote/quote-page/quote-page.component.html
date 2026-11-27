@@ -1,0 +1,30 @@
+<div class="layout">
+  <section class="card">
+    <pq-quote-form [busy]="store.loading()" (quoteRequested)="onQuoteRequested($event)" />
+  </section>
+
+  <section class="card card--result" #resultPanel aria-live="polite" [attr.aria-busy]="store.loading()">
+    @if (store.errorMessage(); as error) {
+      <div class="alert" role="alert">
+        <span>{{ error }}</span>
+        <button type="button" class="alert__close" (click)="store.dismissError()" aria-label="Dismiss error">×</button>
+      </div>
+    }
+
+    @if (store.quoteResult(); as quote) {
+      <div [class.is-stale]="store.loading()">
+        <pq-quote-result [quote]="quote" />
+      </div>
+    } @else if (store.loading()) {
+      <div class="placeholder" data-testid="loading">
+        <span class="placeholder__spinner" aria-hidden="true"></span>
+        <p>Calculating your premium…</p>
+      </div>
+    } @else if (!store.errorMessage()) {
+      <div class="placeholder">
+        <p class="placeholder__title">Your instant estimate will appear here</p>
+        <p>Enter your details and we'll show your monthly and annual premium, your risk band, and exactly which risk factors were applied.</p>
+      </div>
+    }
+  </section>
+</div>

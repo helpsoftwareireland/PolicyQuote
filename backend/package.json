@@ -1,0 +1,29 @@
+{
+  "name": "policyquote-backend",
+  "version": "1.0.0",
+  "description": "PolicyQuote Lambda-style API with a Knowledge Base driven risk engine",
+  "private": true,
+  "main": "dist/handler.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "npm run build && node dist/server.js",
+    "test": "npm run lint:types --silent && jest",
+    "test:coverage": "npm run lint:types --silent && jest --coverage",
+    "lint:types": "tsc -p tsconfig.json --noEmit",
+    "kb:validate": "npm run build --silent && node dist/cli/validate-kb.js"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.150",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.10.0",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.4.0",
+    "typescript": "~6.0.3"
+  }
+}

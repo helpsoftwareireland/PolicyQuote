@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+out-tsc/
+.angular/
+*.log
+.DS_Store
+.claude/settings.local.json
+
+# Assessment brief from the hiring company: not ours to publish
+Exercise_PolicyQuote*.pdf
