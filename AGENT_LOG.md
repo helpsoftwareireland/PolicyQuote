@@ -227,6 +227,17 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 4. **Report:** `git diff --stat` = `kb/risk-kb.json` + `backend/test/kb-live.spec.ts` only. Nothing under `backend/src` or `frontend/src` changed.
 **Compared with the rehearsal (entry 15):** the boundary tests are now generated from the KB (entry 22), so the only hand-written tests are the two that carry business meaning.
 
+### 29. Demo scenarios updated for KB v1.2.0
+**Prompt:** "yes update it and push" (after shipping the flood factor, the agent flagged that docs/05 still described KB v1.1.0).
+**Output:** All expected values were recomputed by running every scenario through the compiled engine and the shipped KB:
+- S11 now scores 195, and S12 now scores 30 ELEVATED.
+- New **S13** (a flat in PL4, exactly 25 = top of STANDARD).
+- K1 replaced: flood is shipped, so the live-add demo is now a compound rule, **Flat AND EX/PL (+20)**, which tips S13 into ELEVATED.
+- New **K6** re-weights the shipped flood factor.
+- Part D gains a "they ask for the flood factor" answer: show the commit, `kb:cases` and S12.
+- The resilience note now mentions the UI notice and `/health` `kbStatus`.
+**Why:** The scenarios document is the presenter's script, so every number in it must match what the running app will show on the day.
+
 ---
 
 <!-- Template for new entries

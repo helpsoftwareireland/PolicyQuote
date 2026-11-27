@@ -3,12 +3,12 @@
 | Item | Value |
 |---|---|
 | Purpose | Ready-made form entries for the live review: every band, every factor, the band boundaries, validation errors and live KB changes |
-| KB baseline | `kb/risk-kb.json` **v1.1.0** (6 factors) |
+| KB baseline | `kb/risk-kb.json` **v1.2.0**: 7 factors, including `flood_zone_postcode` (shipped in commit `60e21a7`) |
 | Expected values | Computed by running each input through the real engine and KB, not by hand |
 
 ## Before you start
 
-1. Start both services (see [README](../README.md#run-it)), then open http://localhost:4200.
+1. From the repo root: `npm install`, then `npm start` (API :3000 + UI :4200). Open http://localhost:4200.
 2. The fastest way to enter a scenario is to click the **Standard** preset, then change only the fields listed.
 3. **Key fact for the panel: the premium depends only on the band.** The score picks a band, and the band's multiplier sets the price. There are only three prices:
 
@@ -20,7 +20,7 @@
 
 The formula is `£300 base × multiplier × 1.2 coverage load`, all three values from the KB.
 
-## Part A: Twelve quote scenarios
+## Part A: Quote scenarios
 
 ### Quick reference
 
@@ -36,8 +36,9 @@ The formula is `£300 base × multiplier × 1.2 coverage load`, all three values
 | S08 | Flat over £500k (compound **met**) | James Wright | 40 | Flat | 600000 | E1 6AN | 0 | **45** | ELEVATED | 45.00 | 540.00 |
 | S09 | Top edge of ELEVATED | Arthur Hughes | 78 | Flat | 300000 | CF10 1AA | 2 | **60** | ELEVATED | 45.00 | 540.00 |
 | S10 | The claims cliff (2 → 3 claims) | Liam Doyle | 35 | House | 300000 | B33 8TH | 3 | **90** | HIGH RISK | 66.00 | 792.00 |
-| S11 | Everything stacks (the "High risk" preset) | Jo Taylor | 22 | Flat | 800000 | EX1 1AA | 3 | **180** | HIGH RISK | 66.00 | 792.00 |
-| S12 | Live-demo profile (Exeter, 1 claim) | Alex Morgan | 40 | House | 300000 | EX1 1AA | 1 | **15** | STANDARD | 30.00 | 360.00 |
+| S11 | Everything stacks (the "High risk" preset) | Jo Taylor | 22 | Flat | 800000 | EX1 1AA | 3 | **195** | HIGH RISK | 66.00 | 792.00 |
+| S12 | Flood zone pushes up a band | Alex Morgan | 40 | House | 300000 | EX1 1AA | 1 | **30** | ELEVATED | 45.00 | 540.00 |
+| S13 | Flat in a flood zone, top edge | Ruth Penrose | 40 | Flat | 300000 | PL4 8AA | 0 | **25** | STANDARD | 30.00 | 360.00 |
 
 ### What each scenario shows
 
@@ -45,19 +46,20 @@ The formula is `£300 base × multiplier × 1.2 coverage load`, all three values
 |---|---|---|
 | S01 | none | The UI says "No risk factors applied". The score starts at 0, and the base price is purely KB values. |
 | S02 | `age_young_elderly`: 20 | **A factor applied but the price didn't move.** Points accumulate, and only the band sets the price. Good for explaining score vs band. |
-| S03 | `property_value_high`: 25 | **Boundary test.** 25 is the inclusive top of STANDARD, so one more point would make it ELEVATED. Also shows `gt 750000`: £800k counts, £750k exactly would not. |
+| S03 | `property_value_high`: 25 | **Boundary test.** 25 is the inclusive top of STANDARD. Also shows `gt 750000`: £800k counts, £750k exactly would not. |
 | S04 | `previous_claims_low`: 15 | Age **70** is inside `outside_range 25–75`, so no age loading. Bungalow carries no type loading. Contrast with S09 (78). |
 | S05 | `previous_claims_low`: 30 (15 × 2) | **`perOccurrence`.** The UI shows "× 2". The points are multiplied by the claim count from the KB rule, not from code. |
 | S06 | `age_young_elderly`: 20, `property_type_flat`: 10 | Two factors that are each harmless (STANDARD on their own) combine to cross into ELEVATED. |
-| S07 | `property_type_flat`: 10 | **Run S07 then S08 back to back.** Same flat, only the value changes. The compound rule stays silent below £500k. |
+| S07 | `property_type_flat`: 10 | **Run S07 then S08 back to back.** Same flat, only the value changes. The compound rule stays silent below £500k. Also: London **E1** does *not* trigger the flood factor (no "EX" prefix). |
 | S08 | `property_type_flat`: 10, `flat_high_value`: 35 | **Compound AND** (`all: [Flat, > £500k]`), the brief's bonus example. Answers "how would you combine two fields?" with the live UI. |
-| S09 | `age_young_elderly`: 20, `previous_claims_low`: 30 (× 2), `property_type_flat`: 10 | **Boundary test.** Exactly 60, the top of ELEVATED. This is the best scenario for the "change a weight" live edit (K2). |
+| S09 | `age_young_elderly`: 20, `previous_claims_low`: 30 (× 2), `property_type_flat`: 10 | **Boundary test.** Exactly 60, the top of ELEVATED. The best scenario for the "change a weight" live edit (K2). |
 | S10 | `previous_claims_high`: 90 (30 × 3) | **One extra claim takes the score from 30 (S05) to 90.** At 3 claims the KB switches from the 15-point rule to the 30-point rule, both per claim. A good discussion of whether that cliff is intended underwriting. |
-| S11 | `age_young_elderly`: 20, `previous_claims_high`: 90 (× 3), `property_type_flat`: 10, `property_value_high`: 25, `flat_high_value`: 35 | The maximum-stacking case. The price is capped at the HIGH RISK band price even at 180 points. The "How we calculated this" panel shows `300 × 2.2 × 1.2`. |
-| S12 | `previous_claims_low`: 15 | The baseline for the flood-zone live change (K1). Sits 10 points below the band boundary. |
+| S11 | `age_young_elderly`: 20, `previous_claims_high`: 90 (× 3), `property_type_flat`: 10, `property_value_high`: 25, `flat_high_value`: 35, `flood_zone_postcode`: 15 | The maximum-stacking case. The price is capped at the HIGH RISK band price even at 195 points. "How we calculated this" shows `300 × 2.2 × 1.2`. |
+| S12 | `previous_claims_low`: 15, `flood_zone_postcode`: 15 | **The shipped flood factor at work.** Without it this profile scores 15 (STANDARD, £30). The `starts_with ["EX","PL"]` rule adds 15 and crosses the boundary to ELEVATED, £45. |
+| S13 | `property_type_flat`: 10, `flood_zone_postcode`: 15 | **Boundary test.** Exactly 25, the top of STANDARD. The baseline for the live-add demo (K1): any new point tips it to ELEVATED. |
 
 ### Suggested 5-minute tour
-**S01 → S02 → S05 → S07 → S08 → S10 → S11.** It goes from no risk, to "points without price change", to per-claim scoring, to the compound rule on/off, to the claims cliff, to maximum stacking.
+**S01 → S02 → S05 → S07 → S08 → S12 → S10 → S11.** It goes from no risk, to "points without price change", to per-claim scoring, to the compound rule on/off, to the flood factor crossing a band, to the claims cliff, to maximum stacking.
 
 ## Part B: Validation & error scenarios
 
@@ -70,7 +72,7 @@ The UI validates first: the submit button stays **disabled** and inline errors a
 | V3 | Property value `0` | "Value must be greater than £0" | 400 · `propertyValue`: "Property value must be greater than 0" |
 | V4 | Claims `1.5` | "Must be a whole number" | 400 · `previousClaims`: "Claims must be a whole number" |
 | V5 | Postcode `sw1a1aa` (lower case, no space) | Accepted | 200. The API normalises it to `SW1A 1AA` and prices it like S01 (£30/£360) |
-| V6 | Stop the backend (`Ctrl+C`), then submit S01 | Red banner: "Cannot reach the quote service right now. Please try again in a moment." (dismissible). The dev proxy answers **502 Bad Gateway**, and the UI treats 0/502/503/504 as "unreachable" | n/a |
+| V6 | Stop the backend, then submit S01 | Red banner: "Cannot reach the quote service right now. Please try again in a moment." (dismissible). The dev proxy answers **502 Bad Gateway**, and the UI treats 0/502/503/504 as "unreachable" | n/a |
 
 V1 via the API, for the panel:
 ```bash
@@ -81,46 +83,53 @@ An unknown property type (e.g. `"Castle"`) can only be sent via the API. It retu
 
 ## Part C: Live KB changes (no restart, no code)
 
-Each change edits **only** `kb/risk-kb.json`. Save the file, then re-submit the same scenario and the server hot-reloads. Use the `add-kb-factor` skill so the agent also adds a test and bumps `version`. **Revert afterwards** with `git checkout kb/risk-kb.json`.
+Each change edits **only** `kb/risk-kb.json`. Save the file, then re-submit the same scenario and the server hot-reloads. Use the `add-kb-factor` skill so the agent runs `kb:validate`, shows the KB-generated test cases (`kb:cases`) and bumps `version`. **Revert afterwards** with `git checkout kb/risk-kb.json`.
 
 | # | KB change | Re-submit | Before → After |
 |---|---|---|---|
-| K1 | **Add** flood zone: `{ "field": "postcode", "operator": "starts_with", "value": ["EX","PL"] }`, +15 | S12 | 15 STANDARD £30 → **30 ELEVATED £45** (new factor listed) |
-| | | `PL4 8AA` in S01 | 0 → 15, still STANDARD (proves the "PL" branch) |
-| | | S07 / S08 (`E1 6AN`) | unchanged: London "E" must **not** match "EX" |
-| | | S11 | 180 → 195, still HIGH RISK £66 (already in the top band) |
+| K1 | **Add a compound factor**: Flat **AND** flood-zone postcode (`all: [eq Flat, starts_with EX/PL]`), +20 | S13 | 25 STANDARD £30 → **45 ELEVATED £45** (new factor listed) |
+| | | S12 (House in EX) | unchanged at 30: the AND needs a Flat |
+| | | S07 (Flat in E1) | unchanged at 10: the AND needs EX/PL |
+| | | S11 | 195 → 215, still HIGH RISK £66 (already in the top band) |
 | K2 | **Change weight**: `previous_claims_low` points 15 → 20 | S09 | 60 ELEVATED £45 → **70 HIGH RISK £66** |
 | | | S05 | 30 → 40, still ELEVATED (score moves, price doesn't) |
 | K3 | **Remove** the `property_type_flat` factor | S06 | 30 ELEVATED £45 → **20 STANDARD £30** |
 | | | S08 | 45 → 35, still ELEVATED (the compound rule still fires) |
-| K4 | **Re-price a band**: ELEVATED `riskMultiplier` 1.5 → 1.6 | S05 | £45 / £540 → **£48 / £576**, same score and band |
+| | | S13 | 25 → 15, still STANDARD |
+| K4 | **Re-price a band**: ELEVATED `riskMultiplier` 1.5 → 1.6 | S05 or S12 | £45 / £540 → **£48 / £576**, same score and band |
 | K5 | **Add an OR rule**: `{ "any": [ {age gt 70}, {previousClaims gte 2} ] }`, +10 | S09 | 60 ELEVATED → **70 HIGH RISK** |
 | | | S05 | 30 → 40, still ELEVATED |
 | | | S04 (age 70, 1 claim) | unchanged: `gt 70` excludes exactly 70, and 1 claim < 2 |
+| K6 | **Re-weight the shipped flood factor**: `flood_zone_postcode` points 15 → 30 | S01 with postcode `PL4 8AA` | 15 STANDARD £30 → **30 ELEVATED £45** |
+| | | S12 | 30 → 45, still ELEVATED |
 
 Copy-paste snippets for the `factors` array:
 
 ```jsonc
-// K1: flood zone (append to "factors"; bump "version" to 1.2.0)
-{ "id": "flood_zone_postcode", "description": "Flood zone postcode area (EX, PL) — higher flood risk",
-  "condition": { "field": "postcode", "operator": "starts_with", "value": ["EX", "PL"] }, "points": 15 }
+// K1: compound AND (append to "factors"; bump "version" to 1.3.0)
+{ "id": "flat_flood_zone", "description": "Flat in a flood zone postcode area (EX, PL)",
+  "condition": { "all": [ { "field": "propertyType", "operator": "eq", "value": "Flat" },
+                          { "field": "postcode", "operator": "starts_with", "value": ["EX", "PL"] } ] },
+  "points": 20 }
 
-// K5: OR rule (append to "factors"; bump "version" to 1.2.0)
+// K5: OR rule (append to "factors"; bump "version" to 1.3.0)
 { "id": "senior_or_claims", "description": "Over 70 or 2+ previous claims",
   "condition": { "any": [ { "field": "age", "operator": "gt", "value": 70 },
                           { "field": "previousClaims", "operator": "gte", "value": 2 } ] }, "points": 10 }
 ```
 
-**Resilience extra:** save the KB with a deliberate typo (e.g. delete a closing brace) and re-submit any scenario. The quote still works on the last valid KB, and the backend log shows `KB reload rejected; serving last-known-good`. Fix the file and the next quote uses it.
+**Resilience extra:** save the KB with a deliberate typo (e.g. delete a closing brace) and re-submit any scenario. The quote is still priced with the last valid KB, and the UI shows **"The latest rule-set edit was rejected by validation…"**. `GET /health` reports `kbStatus: "stale"` with the exact JSON error. Fix the file and the next quote uses it.
 
 ## Part D: Likely panel questions → scenario to show
 
 | Question | Show |
 |---|---|
-| "Add a new risk factor live" | K1 on S12 (or whatever they specify, following the same flow) |
-| "Combine two fields, e.g. Flat AND over £500k" | S07 vs S08: it's already in the KB as `flat_high_value` |
+| "Add a new risk factor live" | K1 on S13, or whatever they specify, following the same skill flow |
+| "Add the flood-zone factor from the brief" | Already shipped as KB v1.2.0: show the entry in `kb/risk-kb.json`, commit `60e21a7` (KB + tests only), `npm run kb:cases`, and S12 in the UI. Then do K6 (re-weight) or K1 live |
+| "Combine two fields, e.g. Flat AND over £500k" | S07 vs S08: it's already in the KB as `flat_high_value`. K1 adds another AND live |
 | "What about OR?" | K5 |
-| "Change a weight without code" | K2 on S09 (crosses into HIGH RISK) |
+| "Change a weight without code" | K2 on S09 (crosses into HIGH RISK) or K6 on a PL postcode |
 | "Where do the prices come from?" | S11 → "How we calculated this" panel, then the `riskBands` block in the KB |
 | "What if the KB is broken?" | Resilience extra above, plus `npm run kb:validate` |
+| "Versioning / breaking schema changes?" | `KB_PATH` as a KB channel of `risk-kb.vN.json` files (Architecture §5.7, `kb.loader.spec.ts` rollout test) |
 | "A rule on data we don't collect (e.g. thatched roof)?" | Not a KB change: it needs a new form field and request-schema field. The skill stops and says so |
