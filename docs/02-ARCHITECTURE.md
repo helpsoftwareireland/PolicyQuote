@@ -211,19 +211,33 @@ monthlyPremium = round2(annualPremium / 12)
 
 ### 5.6 KB loading & caching
 
-- The path comes from `KB_PATH` env var, or defaults to `<repo>/kb/risk-kb.json`.
+- `KB_PATH` is either a **single KB file** or a **KB channel directory** (§5.7). The default is `<repo>/kb/risk-kb.json`.
 - On first use the loader reads the file, `JSON.parse`s it, runs the Zod schema and freezes the result. It is then cached for the warm Lambda container.
-- On each request a cheap `fs.statSync(mtime)` check runs. If the file changed, it is re-validated and swapped atomically. **If the new KB is invalid, the last-known-good KB stays active** and the error is logged. A typo therefore never takes pricing down, and the live demo works without restarting the server.
-- `GET /health` → `{ status, kbVersion, schemaVersion, factorCount }`.
+- On each request a cheap `fs.statSync(mtime)` check runs. If the file changed, it is re-validated and swapped atomically. **If the new KB is invalid or missing, the last-known-good KB stays active**, so a typo never takes pricing down.
+- **The fallback is never silent:**
+  - the rejection is logged;
+  - `GET /health` reports `kbStatus: "stale"` with `lastReloadError`;
+  - quotes carry `X-KB-Status: stale`, and the UI shows a notice.
+- `/health` stays 200 while stale. A failing health check would make ECS restart the task and lose the in-memory last-known-good KB.
+- `GET /health` → `{ status, kbVersion, schemaVersion, factorCount, kbStatus, lastReloadError? }`.
 
-### 5.7 KB versioning in production (bonus — design)
+### 5.7 KB versioning: breaking schema changes without redeploying the Lambda (bonus)
+
+**Implemented in the loader** (`selectKbFile`, tests in `kb.loader.spec.ts`). A **KB channel** is a directory holding one file per schema version: `risk-kb.v1.json`, `risk-kb.v2.json`, … Each engine declares `SUPPORTED_SCHEMA_VERSIONS` and loads the **newest file it supports**. A file whose name disagrees with its `schemaVersion` is rejected.
+
+Rollout of a breaking change (v1 → v2), **with no Lambda redeploy at any step**:
+1. The KB pipeline publishes `risk-kb.v2.json` **alongside** `risk-kb.v1.json`. It can be generated from v1 by a migration script, or authored in the new shape.
+2. Lambdas already deployed (they support only v1) keep loading v1 and pricing normally. A test proves that publishing v2 does not disturb a running v1 engine.
+3. Rule changes during the transition are published to both files. v1 engines keep picking them up through hot reload.
+4. A v2-capable engine ships on its **normal release schedule** and automatically moves to v2. The KB publication never forced it.
+5. Once no v1 engine remains, the pipeline stops publishing `risk-kb.v1.json`.
 
 | Concern | Approach |
 |---|---|
-| Storage | KB lives in Git (PR review by underwriting + engineering, CI runs `kb:validate` + the test suite). On merge it is published to **S3 (versioned bucket)** or **AWS AppConfig** as an immutable `risk-kb@<version>.json` |
-| Selection | Lambda env / AppConfig pointer names the active version, so promotion and rollback are a config flip, not a deploy. Each quote echoes `kbVersion` for audit |
-| Non-breaking changes | Same `schemaVersion`. Any engine on that schema accepts it. Hot-swapped via cache TTL/mtime |
-| Breaking schema changes | Bump `schemaVersion`. The engine declares `SUPPORTED_SCHEMA_VERSIONS` and **refuses** (keeps last-known-good) a KB it can't interpret. Rollout is *expand → migrate → contract*: (1) deploy an engine supporting N and N+1, (2) publish the N+1 KB, (3) drop N later. The KB never outruns the engine |
+| Storage | KB is authored in Git (PR review by underwriting + engineering; CI runs `kb:validate` and the test suite). On merge it is published as the channel directory to **S3** (versioned bucket) or **AppConfig**, and synced to the Lambda's `/tmp` or an EFS mount that `KB_PATH` points at. *The channel selection logic is implemented. The S3/AppConfig transport is the deployment-specific piece and is not built here.* |
+| Promotion / rollback | Overwrite or restore the file in the channel (S3 versioning keeps history). Hot reload picks it up. Each quote echoes `kbVersion` for audit |
+| Non-breaking changes | Same `schemaVersion`, same file, hot-reloaded on mtime change |
+| Breaking changes | New file `risk-kb.vN+1.json` next to the old one (steps above) |
 | Audit / replay | Persisting `{input, kbVersion}` per quote allows any historic quote to be re-priced exactly |
 
 ## 6. API contract

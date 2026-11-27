@@ -1,14 +1,49 @@
-import { readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { errorMessage, KnowledgeBaseError, type FieldIssue } from '../errors';
 import { logger } from '../logger';
-import { flattenKbIssues, KnowledgeBaseSchema } from './kb.schema';
+import { flattenKbIssues, KnowledgeBaseSchema, SUPPORTED_SCHEMA_VERSIONS } from './kb.schema';
 import type { KnowledgeBase } from './kb.types';
 
 /** `<repo>/kb/risk-kb.json` — same depth from `src/kb` and `dist/kb`. Override with KB_PATH. */
 export const DEFAULT_KB_PATH = path.resolve(__dirname, '..', '..', '..', 'kb', 'risk-kb.json');
 
-export const resolveKbPath = (): string => (process.env.KB_PATH ? path.resolve(process.env.KB_PATH) : DEFAULT_KB_PATH);
+/** File naming inside a KB channel directory: one file per schema version. */
+const VERSIONED_KB_FILE = /^risk-kb\.v(\d+)\.json$/;
+
+const isDirectory = (p: string): boolean => {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Breaking KB schema changes without redeploying the Lambda (Architecture §5.7, review item G2).
+ * A KB *channel* directory holds `risk-kb.v1.json`, `risk-kb.v2.json`, ... — the pipeline publishes a new
+ * schema version **alongside** the old one. Each engine picks the newest version it supports, so engines
+ * already deployed keep working untouched and newer engines move to the new schema whenever they ship.
+ */
+export function selectKbFile(dir: string, supported: readonly number[] = SUPPORTED_SCHEMA_VERSIONS): string {
+  const best = readdirSync(dir)
+    .flatMap((name) => {
+      const match = VERSIONED_KB_FILE.exec(name);
+      return match ? [{ name, schemaVersion: Number(match[1]) }] : [];
+    })
+    .filter((file) => supported.includes(file.schemaVersion))
+    .sort((a, b) => b.schemaVersion - a.schemaVersion)[0];
+  if (!best) {
+    throw new KnowledgeBaseError(`No KB in ${dir} for supported schema version(s) ${supported.join(', ')}`);
+  }
+  return path.join(dir, best.name);
+}
+
+/** KB_PATH may be a single KB file or a channel directory; default is the repo's kb/risk-kb.json. */
+export function resolveKbPath(): string {
+  const configured = process.env.KB_PATH ? path.resolve(process.env.KB_PATH) : DEFAULT_KB_PATH;
+  return isDirectory(configured) ? selectKbFile(configured) : configured;
+}
 
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -40,7 +75,13 @@ export function loadKnowledgeBaseFromFile(filePath: string): KnowledgeBase {
   } catch (err) {
     throw new KnowledgeBaseError(`Knowledge Base is not valid JSON: ${errorMessage(err)}`);
   }
-  return parseKnowledgeBase(json);
+  const kb = parseKnowledgeBase(json);
+  // In a channel, the file name is the contract: risk-kb.v2.json must actually contain a schemaVersion 2 KB.
+  const named = VERSIONED_KB_FILE.exec(path.basename(filePath));
+  if (named && Number(named[1]) !== kb.schemaVersion) {
+    throw new KnowledgeBaseError(`${path.basename(filePath)} declares schemaVersion ${kb.schemaVersion}`);
+  }
+  return kb;
 }
 
 interface CacheEntry {
@@ -83,7 +124,15 @@ function rejectReload(previous: CacheEntry, filePath: string, err: unknown): Kno
  * - If the new file is invalid or missing, keeps serving the last-known-good KB, logs the issues and
  *   records them so `/health` and the `X-KB-Status` header surface the problem (never silent).
  */
-export function getKnowledgeBase(filePath: string = resolveKbPath()): KnowledgeBase {
+export function getKnowledgeBase(explicitPath?: string): KnowledgeBase {
+  let filePath: string;
+  try {
+    filePath = explicitPath ?? resolveKbPath();
+  } catch (err) {
+    // e.g. the channel directory was emptied mid-publish: keep the last-known-good KB if we have one.
+    if (cache) return rejectReload(cache, cache.filePath, err);
+    throw err;
+  }
   const previous = cache?.filePath === filePath ? cache : undefined;
 
   let mtimeMs: number;

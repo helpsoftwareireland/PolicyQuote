@@ -143,6 +143,12 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 - The gap test was rewritten to use a real gap between two bands. +2 tests (148).
 **Rejected alternative:** making `label`/`summary`/`schemaVersion` optional so the brief's example validates verbatim. The brief's example has no multipliers at all (they're in a table), so it can never price unmodified. Customer-facing summary text (FR-07) should stay mandatory.
 
+### 21. G2: breaking KB schema changes without redeploying the Lambda
+**Prompt:** "fix the issues" (review item G2: the documented answer, "deploy an engine supporting N and N+1", *is* a redeploy).
+**Output:** `KB_PATH` may now be a **KB channel directory** of `risk-kb.v{N}.json` files. `selectKbFile` loads the newest schema version this engine supports. A file whose name disagrees with its `schemaVersion` is rejected, and an emptied channel falls back to the last-known-good KB (flagged stale). +5 tests, including a **simulated rollout**: publishing a v2 file next to v1 leaves a running v1 engine pricing, with v1 patches still hot-reloading. 153/153. Architecture §5.7 and SOLUTION were rewritten, and the non-existent "cache TTL" was removed.
+**Honest scope:** the selection logic is implemented and tested. The S3/AppConfig → `/tmp`/EFS transport is described, not built.
+**Why:** It decouples KB publication from engine deployment. That's the actual intent of "without redeploying the Lambda": a breaking KB change never forces a lock-step deploy.
+
 ---
 
 <!-- Template for new entries
