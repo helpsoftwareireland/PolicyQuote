@@ -79,17 +79,19 @@ Verified in `@angular/forms@22.3.0`: **Signal Forms is stable.** `form()` is tag
 
 ## 7. Resolution
 
-_Filled in as each fix lands — see the table below and AGENT_LOG entries 17+._
+Each fix is a separate commit with its own AGENT_LOG entry (17–25). The full regression is in [04-TEST-REPORT.md §9a](04-TEST-REPORT.md).
 
-| # | Status | Commit |
-|---|---|---|
-| G1 | In progress (agent side). **Candidate action outstanding**: add your own rejections | — |
-| G2 | Open | — |
-| G3 | Open | — |
-| G4 | Open | — |
-| G5 | Open | — |
-| G6 | Open | — |
-| G7 | Open | — |
-| G8 | Open | — |
-| G9 | Open | — |
-| BRD | Open | — |
+| # | Status | What was done | Commit |
+|---|---|---|---|
+| G1 | ◐ Agent side done | Fixes made as small, separately committed and logged steps (9 commits, entries 17–25). **Outstanding, and it has to be the candidate:** add your own rejections and decisions to AGENT_LOG. Do not backfill prompts that never happened | `f70bc3c`…`08d2058` |
+| G2 | ✅ | KB channel (`risk-kb.v{N}.json`, newest supported schema wins), with a simulated rollout test. Architecture §5.7 and SOLUTION rewritten | `9d75eb7` |
+| G3 | ✅ | `kb-case-generator.ts` + `npm run kb:cases`: boundary tests generated from every KB factor, with unreachable-probe detection | `5a9dc09` |
+| G4 | ✅ | `/health` `kbStatus` + `lastReloadError`, `X-KB-Status` header, UI notice. Verified in Chrome | `5d4e39c` |
+| G5 | ✅ | Root `npm install` + `npm start` (2 commands). Also fixed the `PORT` collision with `ng serve` | `eee8e3b` |
+| G6 | ✅ | Signal-driven form state (`computed` from per-control `events`), dead store state removed, single tone mapping, total = `riskScore` | `d1ce56b` |
+| G7 | ✅ | Event parsing inside `try`, `errorMessage()` helper, `formatCurrency` instead of an injected pipe | `f50098e`, `d1ce56b` |
+| G8 | ✅ | Finite top-band `max` accepted (highest band always open-ended). Optional `notes`. `.strict()` kept | `8eeba9f` |
+| G9 | ✅ | Lambda bundle and `KB_PATH` documented (README, Architecture §9) | `08d2058` |
+| BRD | ✅ | v1.1: KB-07, KB-09, A-5 corrected. FR-02 limits moved to A-6. AG-01..04 added. KB deviations recorded in §7. D-1 and D-4 completed | final docs commit |
+
+**Deliberately not done:** migrating to Signal Forms (see §3; documented as the next step in SOLUTION), and a Lambda zip script (G9: documentation was the proportionate fix).

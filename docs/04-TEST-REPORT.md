@@ -14,11 +14,11 @@
 | Gate | Command | Result |
 |---|---|---|
 | Backend type-check | `cd backend && npm run lint:types` | ✅ 0 errors |
-| Backend unit/integration | `cd backend && npm run test:coverage` | ✅ **143 / 143** passed, 9 suites |
+| Backend unit/integration | `cd backend && npm run test:coverage` | ✅ **183 / 183** passed, 10 suites (143 at first run; see §9a for the review fixes) |
 | Backend coverage | (threshold 90 % lines) | ✅ 98.9 % lines · 94.0 % branches. `engine/` **100 %** |
 | KB validation | `cd backend && npm run kb:validate` | ✅ KB valid: v1.1.0, 6 factors, 3 contiguous bands |
 | Frontend type-check | `cd frontend && npm run lint:types` | ✅ 0 errors (strict templates) |
-| Frontend unit/component | `cd frontend && npm test` | ✅ **42 / 42** passed, 5 files (38 at first run, +4 for DEF-3) |
+| Frontend unit/component | `cd frontend && npm test` | ✅ **44 / 44** passed, 5 files (38 at first run, +4 for DEF-3, then net +2 in §9a) |
 | Frontend production build | `cd frontend && npm run build` | ✅ 245 kB raw / 67 kB transfer, no warnings |
 | HTTP smoke (live server) | `curl` script, §4 | ✅ 11 / 11 checks |
 | Live-demo rehearsal | KB-only change on a running server, §5 | ✅ |
@@ -126,6 +126,31 @@ With the backend running, `flood_zone_postcode` (+15, `starts_with ["EX","PL"]`)
 | Dev server + proxy + browser quote flow | ✅ ELEVATED quote rendered, title effect OK, no app console errors |
 
 Why not TypeScript 7.0.2 (npm `latest`): Angular 22.3 declares peer `typescript >=6.0 <6.1`, and `ts-jest` declares `<7`.
+
+## 9a. Regression after the critical-review fixes (G2–G9)
+
+See [06-CRITICAL-REVIEW.md](06-CRITICAL-REVIEW.md) for the findings, and AGENT_LOG entries 18–25 for each fix.
+
+| Gate | Result |
+|---|---|
+| Root `npm test` (backend type-check + Jest, then frontend Vitest) | ✅ **183 / 183** backend (10 suites) · **44 / 44** frontend |
+| Coverage | ✅ 98.9 % lines overall · `engine/` 100 % |
+| KB-generated cases (`npm run kb:cases`) | ✅ 17 cases from 6 factors. A KB-only flood factor got 3 cases with zero test code |
+| Frontend type-check + prod build | ✅ clean |
+| Static checks (`any`, `switch`, `Subject`) | ✅ none |
+| Root `npm install` + `npm start` (G5) | ✅ API and UI up. Ports free after stop. With 3000 taken: the API fails, the UI is stopped, exit 1 |
+| **Browser: stale-KB notice (G4)** | ✅ A typo in a KB copy (missing `}`) → the same quote still priced (£45/£540) **with the notice** "The latest rule-set edit was rejected…", and `/health` showed `kbStatus: "stale"` with the JSON error |
+| Form regression guard (G6) | ✅ The second-field touched test **fails** with group-only events and passes with the fix (verified both ways) |
+| Docker image rebuilt | ✅ `/health` includes `kbStatus`, quote OK, HEALTHCHECK `healthy` |
+| SOLUTION.md | ✅ 295 words |
+
+New defects found while fixing, and resolved in the same round:
+
+| ID | Found by | Description | Fix |
+|---|---|---|---|
+| DEF-4 | Running `start-all` | `ng serve` also honours the `PORT` env var, so with `PORT` set both services bound the same port | UI started without `PORT` and with `--port 4200`. README warns |
+| DEF-5 | Reading `@angular/forms` source | A `FormGroup` emits `touched` only once, so a group-level signal bridge would miss later fields | Per-control `events` merged. Regression test |
+| DEF-6 | `tsc` on the new generator | Loose probe typing, which would have needed casts | Probes go through `QuoteRequestSchema`. Unreachable probes reported |
 
 ## 10. Requirement traceability (Must items)
 

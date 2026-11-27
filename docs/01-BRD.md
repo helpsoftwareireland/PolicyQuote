@@ -4,8 +4,8 @@
 |---|---|
 | Product | PolicyQuote — Policy Risk & Premium Engine |
 | Document | Business Requirements Document (BRD) |
-| Version | 1.0 |
-| Date | 2026-11-26 |
+| Version | 1.1: corrected after the critical review ([06-CRITICAL-REVIEW.md](06-CRITICAL-REVIEW.md) §5). KB-07, KB-09 and A-5 fixed; FR-02 limits moved to A-6; agent-workflow requirements AG-01..04 added; KB deviations recorded in §7 |
+| Date | 2026-11-26 (v1.0) · 2026-11-27 (v1.1) |
 | Author role | Business Analyst |
 | Source | `Exercise_PolicyQuote 1.pdf` (Take-Away Exercise, AI Agent Edition) |
 | Status | Baselined — input to Architecture (02) and Plan (03) |
@@ -65,7 +65,7 @@ A second driver is **demonstrating AI-assisted engineering**. The solution is bu
 | ID | Requirement | Priority |
 |---|---|---|
 | FR-01 | The form captures: **customer name**, **age**, **property type** (House / Flat / Bungalow), **property value (£)**, **postcode**, **number of previous claims in the last 5 years** | Must |
-| FR-02 | The form is an Angular **Reactive Form**, with client-side validation: all fields required; age 18–120 (whole number); property value > 0; claims 0–50 (whole number); postcode in UK format; name 2–100 characters | Must |
+| FR-02 | The form is an Angular **Reactive Form** with client-side validation. All fields are required. Field limits are assumptions (A-6), not from the brief | Must |
 | FR-03 | The submit button is disabled while the form is invalid or a request is in flight | Must |
 | FR-04 | Inline, field-level error messages are shown once a field is touched | Should |
 
@@ -107,12 +107,21 @@ A second driver is **demonstrating AI-assisted engineering**. The solution is bu
 | KB-04 | Supported operators: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between`, `outside_range`, `in`, `starts_with` (case-insensitive string prefix, single value or list) | Must |
 | KB-05 | **Adding** a factor needs only a new KB entry. **Changing** a weight needs only a KB edit. **Removing** a factor needs only deleting its entry. **No engine code change** in any of these cases | Must |
 | KB-06 | The engine is table-driven: it iterates factors and dispatches to a generic operator registry. No `if/else` chain per factor and no `switch` per operator | Must |
-| KB-07 | The KB is validated at load time against a schema. An invalid KB fails fast with a clear error and is never half-applied | Must |
+| KB-07 | The KB is validated against a schema and is never half-applied. **At boot**, an invalid KB fails fast with a clear error. **At runtime**, an invalid edit is rejected: the last-known-good KB keeps pricing, and the rejection is surfaced (log, `/health` `kbStatus: stale`, `X-KB-Status` header, UI notice), never silent | Must |
 | KB-08 | **Compound conditions**: a condition can be `{ "all": [...] }` (AND) or `{ "any": [...] }` (OR), nestable. Example: Flat AND value > £500k → +35 | Should (bonus) |
-| KB-09 | **Versioning**: the KB `version` is returned in every quote and from `/health`. The KB path can be overridden with an environment variable, so a new rule set can be pointed to without rebuilding code | Should (bonus) |
+| KB-09 | **Versioning** (brief bonus): the KB `version` is returned in every quote and from `/health`. **Breaking KB schema changes are managed without redeploying the Lambda**: a KB channel holds one file per `schemaVersion`, and each engine loads the newest it supports (Architecture §5.7). *Corrected 2026-11-27: the first BRD reduced this bonus to "the KB path is overridable" and lost the breaking-change part (review G2)* | Should (bonus) |
 | KB-10 | Band summaries (plain-English text) are KB content, not code | Should |
 
-### 6.5 Operational
+### 6.5 Agent workflow (from the brief; added 2026-11-27, review G3)
+
+| ID | Requirement | Priority |
+|---|---|---|
+| AG-01 | An AI coding agent is used throughout, configured with a committed project skill/system prompt (`CLAUDE.md`, `.claude/skills/`) | Must |
+| AG-02 | The agent is used to **generate code from the Knowledge Base**, not just boilerplate. Implemented as KB-derived boundary test cases (`kb-case-generator.ts`, `npm run kb:cases`) | Must |
+| AG-03 | `AGENT_LOG.md` records every significant interaction: prompt → output → what changed → why, including rejected output | Must |
+| AG-04 | Live review: add a panel-specified factor via the agent, demonstrate it in the running app, explain every line. Also explain: combining two fields (KB-08), and version-controlled rule sets in production (KB-09) | Must |
+
+### 6.6 Operational
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -140,7 +149,17 @@ A second driver is **demonstrating AI-assisted engineering**. The solution is bu
 Base premium £300 and coverage load factor 1.2 give these annual premiums: STANDARD £360.00, ELEVATED £540.00, HIGH RISK £792.00.
 
 **Rule BR-1:** `perOccurrence: true` multiplies the points by the numeric value of the condition's field (e.g. 2 claims × 15 = 30).
-**Rule BR-2:** If a score falls outside every band, this is a KB configuration error and the API returns 500. The KB validator rejects gaps at load time.
+**Rule BR-2:** If a score falls outside every band, this is a KB configuration error and the API returns 500. The KB validator rejects gaps at load time, and the highest band is always open-ended, so in practice every score maps to a band.
+
+**Deliberate deviations from the brief's example KB** (the brief says "you may extend this"):
+
+| Brief example | This KB | Why |
+|---|---|---|
+| `riskMultiplier` only in a table | `riskMultiplier` inside each band | "No hardcoded scoring values in application code" |
+| Bands have only `min`/`max` | Bands also have `label` and `summary` | Customer-facing risk text is KB content (KB-10) |
+| `"HIGH_RISK": { "max": 999 }` | `"max": null`. **999 is also accepted**, and the top band is open-ended either way | 50 claims × 30 points = 1,500 would otherwise fall outside every band |
+| `version` only | `schemaVersion` + `version` + `currency` | Engine-compatibility contract (KB-09) |
+| — | optional `notes` on factors and bands | Analyst rationale. Unknown keys are still rejected (typo protection) |
 
 ## 8. Non-functional requirements
 
@@ -160,16 +179,17 @@ Base premium £300 and coverage load factor 1.2 give these annual premiums: STAN
 - A-2: `riskMultiplier` is a property of each band in the KB. The brief shows it in a table, so we store it in the KB so that no scoring values live in code.
 - A-3: Postcode validation is UK-format and syntactic only. It is normalised to uppercase.
 - A-4: "Previous claims" and "age" are whole numbers.
-- A-5: The KB is a local file loaded once per Lambda cold start (cached), and reloaded on `KB_PATH` change or process restart.
+- A-5: The KB is loaded once and cached per process / warm Lambda container, then **re-validated whenever the KB file changes** (mtime), with no restart. *(Corrected 2026-11-27: the first BRD said "on `KB_PATH` change or process restart".)*
+- A-6: Input limits are product assumptions, not from the brief: age 18–120 (whole number), property value £1–£100m, claims 0–50 (whole number), name 2–100 characters, UK postcode format.
 
 ## 10. Deliverables (acceptance checklist)
 
 | ID | Deliverable |
 |---|---|
-| D-1 | Source repo: `backend/`, `frontend/`, `kb/risk-kb.json` |
+| D-1 | Public GitHub repository (or zip): `backend/`, `frontend/`, `kb/risk-kb.json` |
 | D-2 | `README.md` — run in < 5 commands, KB location documented |
 | D-3 | `AGENT_LOG.md` — prompt → output → change → why |
-| D-4 | `SOLUTION.md` — ≤ 300 words |
+| D-4 | `SOLUTION.md` (≤ 300 words) covering architecture decisions, KB schema design choices, agent skill configuration rationale, and one thing to improve with more time |
 | D-5 | `CLAUDE.md` + `.claude/skills/` — agent configuration |
 | D-6 | `backend/Dockerfile` (bonus) |
 | D-7 | Passing automated tests (backend Jest, frontend unit tests) and a QA test report |

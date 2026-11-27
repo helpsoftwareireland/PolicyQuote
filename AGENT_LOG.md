@@ -183,6 +183,14 @@ Format per entry: **Prompt → Output → What changed / was rejected → Why**.
 **Output:** Architecture §9 and the README now specify the bundle contents, the handler (`dist/handler.handler`), `KB_PATH=/var/task/kb/risk-kb.json`, and why a bundled KB needs a redeploy while a KB channel on EFS or `/tmp` doesn't.
 **Rejected:** a `package:lambda` script. Zipping needs either a platform-specific tool (`zip` / `Compress-Archive`) or a new dependency, for a deliverable the brief doesn't ask to deploy. Documentation is the proportionate fix; the Docker image is the verified deployable.
 
+### 26. BRD corrections, final regression, push
+**Prompt:** "save the review to docs and fix the issues" (closing items).
+**Output:**
+- BRD v1.1: KB-07 now reconciles fail-fast at boot with last-known-good at runtime. KB-09 restores the brief's real bonus wording. A-5 corrected. FR-02 limits labelled as assumptions (A-6). Agent-workflow requirements AG-01..04 added, which the first BRD dropped. The KB deviations from the brief's example are recorded.
+- Test report §9a and the review's resolution table added. SOLUTION refreshed to 295 words: the next step is now Signal Forms with a shared Zod schema.
+- Final regression: 183 + 44 tests, coverage, build, static checks, `kb:cases`, root `npm start`, Docker image, and the stale-KB notice verified in Chrome against a deliberately broken KB *copy* (the repo KB was never touched).
+**Left for the candidate (G1):** add your own entries: what *you* rejected or changed in the agent's output and why. The panel will ask, and only you can answer it truthfully.
+
 ---
 
 <!-- Template for new entries
